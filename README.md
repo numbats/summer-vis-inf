@@ -1,2 +1,2 @@
-# summer-vis-inf
-This is the repo for a summer project to conduct a visual inference study on appropriate residual diagnostics for multi-level models. 
+# Regression diagnostics
+This is the repo for a 2020-2021 summer project to conduct a visual inference study on appropriate residual diagnostics for multi-level models. 
