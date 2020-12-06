@@ -7,3 +7,7 @@ This is the repo for a 2020-2021 summer project to conduct a visual inference st
 # Overall goal
 
 * Build from Kaiwen's thesis
+
+1. Clean up shiny app
+2. Check metric underlying is correct
+3. Run experiment 
