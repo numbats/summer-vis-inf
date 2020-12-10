@@ -15,5 +15,14 @@ This is the repo for a 2020-2021 summer project to conduct a visual inference st
 
 # Milestone
 
-* 2020/12/07: Read Kaiwen's thesis and go through Shiny app code 
-* 2020/12/11: Read [these papers](https://paperpile.com/shared/dxNYN7). Might be best to start off with Graphical inference for infovis paper. Singer et al. paper is hard to read. 
+## 2020/12/07
+
+* Read Kaiwen's thesis and go through Shiny app code 
+
+## 2020/12/11: 
+
+* Read [these papers](https://paperpile.com/shared/dxNYN7). Might be best to start off with Graphical inference for infovis paper. 
+* Note: Singer et al. paper is hard to read. 
+* **Write a summary as you read.** 
+* Commit summaries and other additions regularly to this repo.
+* Over summer break, get the R Shiny experiment working and embed your own lineup.
