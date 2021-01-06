@@ -26,3 +26,8 @@ This is the repo for a 2020-2021 summer project to conduct a visual inference st
 * **Write a summary as you read.** 
 * Commit summaries and other additions regularly to this repo.
 * Over summer break, get the R Shiny experiment working and embed your own lineup.
+
+## 2020/01/07:
+
+* [carry over] get the R Shiny experiment working and embed your own lineup
+* Work through the code by Kaiwen to get the confounded conditional residual.
