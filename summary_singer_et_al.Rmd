@@ -1,0 +1,40 @@
+---
+title: "Diagnostic Tools for Linear Mixed Models "
+author: "Aarathy Babu"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Diagnostics in Gaussian setup
+
+To evaluate the fitness of a statistical model, we use residual and sensitivity analyses. Residuals are used to check linearity of effects, homoskedasticity of errors, presence of outliers and influential observations etc. Sensitivity analyses (case deletion, leverage analysis etc) are undertaken to evaluate changes when some deviation is applied to the fitted model. 
+
+### Residual Analysis
+
+3 types of residuals in LMM : 
+- Marginal residuals : predicting marginal errors 
+- conditional residuals : predicts conditional errors
+- Random effects residuals : predict random effects
+
+these lmm residuals can also confounded (cobfounded for a specific type of error if it depends on other errors than the one supposed to predict)
+
+
+### Global Influence Analysis
+
+the leverage with respect to the random effects of the conditional fitted values may be confounded by the leverage with respect to the marginal fitted values. 
+
+alternative to measure leverage of the observations and units wrt random effect components = generalized random component leverage matrix. 
+
+#### Case deletion analysis
+
+- Unit-oriented measures may not be convenient to detect influential units in view of the relative position of the observations within and across subjects.
+
+Conditional Cook distance : based on observation oriented influence measures. It is a useful measure to evaluate the influence of the j -th observation from the i-th unit on the estimates. 
+
+-  non-deletion method based on studentized residual sums of squares (TRSS) plots, more efficient and flexible than Cook distance-based methods to identify outlying units or observations.
+
+#### Local Influence analysis
