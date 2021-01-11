@@ -1,9 +1,16 @@
 .taipan_image_div {
   position:relative;
+  display: block;
+ text-align: center;
 }
 img {
-  max-width: 100%;
+  
+ width: 61%;
+    height: 100%; 
+    object-fit: contain;
+  
 }
+
 out_img_overlay {
 position:absolute;
 top:0;
