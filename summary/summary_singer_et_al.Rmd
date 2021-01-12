@@ -124,7 +124,7 @@ serially correlated but does not show further serial correlation in the conditio
 
 - The corresponding plot of the modified Lesaffre–Verbeke index suggests that the covariance structure is not adequate for some animals (there might be calf-specific variability for some animals)
 
-- d an ad hoc grouping according to the values of the modified Lesaffre–Verbeke index to avoid over-parametrisation. 
+-  an ad hoc grouping according to the values of the modified Lesaffre–Verbeke index to avoid over-parametrisation is done. 
 
 ### Discussion 
 
