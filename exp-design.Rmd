@@ -1,0 +1,27 @@
+---
+output: github_document
+---
+
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r}
+library(edibble)
+
+start_design("Residual diagnostic for multi-level models") %>% 
+  set_units(person = 100,
+            question = nested_in(person, 12)) %>% 
+  set_trts(res_type = c("Conditional", "Least confounded"),
+           #data = c("A", "B", "C"),
+           noise = c("none", "some", "a lot")) %>% 
+  allocate_trts(res_type ~ question) %>% 
+  randomise_trts() %>% 
+  serve_table()
+
+```
+

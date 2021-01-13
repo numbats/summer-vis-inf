@@ -31,3 +31,10 @@ This is the repo for a 2020-2021 summer project to conduct a visual inference st
 
 * [carry over] get the R Shiny experiment working and embed your own lineup
 * Work through the code by Kaiwen to get the confounded conditional residual.
+
+## 2020/01/14:
+
+* Work through the simulation code by Kaiwen (focus just on sleep data for the moment)
+* Change the simulation setup so that there is more difference between null and data plots. 
+* Think about how you would set up the experiment to test the 
+ difference between least confounded residual vs. conditional residual. 
