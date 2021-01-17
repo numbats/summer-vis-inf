@@ -1,0 +1,492 @@
+---
+title: "Case: Agricultural Data"
+date: "`Sys.Date()`"
+output:
+  html_document
+---
+
+```{r setup, warning = FALSE, message = FALSE}
+library(agridat) # various ag data sets
+library(sommer) # for fitting mixed models
+library(tidyverse)
+library(ggplot2)
+library(lme4)
+library(expm)
+library(Matrix)
+library(MASS)
+library(nullabor)
+data(bridges.cucumber)
+df <- bridges.cucumber %>% 
+  mutate(rowf = factor(row),
+         colf = factor(col))
+A <- diag(nlevels(df$gen))
+rownames(A) <- colnames(A) <- levels(df$gen)
+```
+
+```{r data-summary}
+skimr::skim(df)
+```
+
+```{r groups descp}
+group <- df %>% group_by(loc, gen) %>% tally()
+```
+
+```{r model}
+fit <- mmer(yield ~ 1 + loc,
+            # random: random effects
+            # vs(ds(x), y): diagonal covariance structure for the "y" covariate for all 
+            # levels of the factor covariate "x"
+            random =~ vs(ds(loc), gen, Gu = A),
+            # rcov: error term
+            rcov =~ units,
+            data = df)
+
+summary(fit)
+```
+
+
+```{r fit}
+randef(fit)
+
+# data frame of fixed effects (BLUEs)
+as.vector(fit$Beta)
+
+# list for each random effect (BLUPs)
+fit$U
+
+# residual values (Marginal residuals)
+fit$residuals
+
+plot(fit)
+```
+
+# Uses of residuals for diagnostic purposes
+
+$$y = X\beta + Zb + e$$
+
+```{r values}
+y <- df$yield # y
+X <- model.matrix(~loc, data = df) # X
+beta_hat <- fit$Beta$Estimate # \beta
+Z <- model.matrix(~gen:loc -1, data = df) # Z
+b_hat <- unlist(fit$U) # b
+
+N <- length(y) # number of observation
+n <- nrow(group) # number of groups indicates i = 1, 2, 3, ..., 8
+n.levels <- unique(group$n) # number of obervations within each group
+p <- ncol(X) # number of vector of fixed effects
+q <- ncol(Z) # number of vector of random effects
+
+fitted <-  fit$fitted[,1] # fitted/predicted value of y
+# predy <- X %*% beta_hat
+# all(fitted == predy) ## TRUE - checked which is correct
+yi <- vector("list", n)
+for (i in 1:n){
+  yi[[i]] <- y[(i*4-3):(i*4)]
+}
+
+Xi <- vector("list", n)
+for (i in 1:n){
+  Xi[[i]] <- X[(i*4-3):(i*4),]
+}
+```
+
+```{r V}
+options(max.print=999999)
+# Covariance matrix of Y (denote as V,\Omega)
+V <- solve(fit$Vi)
+iV <- fit$Vi
+
+# variance for each group...
+Omgi <- vector("list", n)
+for (i in 1:n){
+  Omgi[[i]] <- V[(i*4-3):(i*4),(i*4-3):(i*4)]
+}
+```
+
+```{r Q}
+var.beta <- solve((t(X) %*% iV %*% X)) # predicted variance of fixed effect
+# Var.Beta <- fit$VarBeta # checked which are the same
+Q <- iV - iV %*% X %*% var.beta %*% t(X) %*% iV
+```
+
+```{r residuals(marginal and conditional)}
+# marginal residuals
+resm <- y - X %*% beta_hat
+#all(resm == fit$residuals)
+resm.i <- vector("list", n) # same as resm
+for (i in 1:n){
+  resm.i[[i]] <- yi[[i]] - Xi[[i]]%*%beta_hat
+}
+
+# conditional residuals
+resc <- y - X %*% beta_hat - Z %*% b_hat
+```
+
+## Marginal residuals
+
+```{r variance of marginal residuals}
+var.resm <- V - X %*% solve((t(X) %*% iV %*% X)) %*% t(X)
+```
+
+```{r standardised marginal residuals}
+std.resm <- resm/sqrt(diag(var.resm))
+```
+
+### Please correct me if I'm wrong
+This chunk is about the within-unit covariance structure is adequate, $V_i = ||I_{m_i} - \varepsilon_i \varepsilon_i^\top||^2$, where $\varepsilon_i = \hat{\Omega}_i^{1/2} \hat{\xi}_i$ with $\Omega_i = \Omega_i({\theta})$ should be close to zero.
+
+```{r Verbeke..}
+vareps.i <- vector("list", n)
+for (i in 1:n){
+  vareps.i[[i]] <- expm::sqrtm(Omgi[[i]]) %*% resm.i[[i]]
+}
+
+Verbeke.i <- vector("list", n)
+for (i in 1:n){
+  Verbeke.i[[i]] <- norm(diag(1,4,4) - vareps.i[[i]] %*% t(vareps.i[[i]]), type = "2")
+}
+
+Ver.star <- sqrt(unlist(Verbeke.i))
+```
+
+```{r plot1}
+plot(fitted, std.resm, xlab = "Marginal fitted values",
+     ylab = "Standardized marginal residuals",
+     pch = 20, cex = 1.2, cex.lab = 1.2, cex.axis = 1.3,
+     ylim = c(-1.3*max(abs(range(std.resm))),1.3*max(abs(range(std.resm)))))
+abline(h = 0, lty = 3)
+```
+
+```{r plot2}
+plot(1:nrow(df), std.resm, xlab = "Observation indices",
+     ylab = "Standardized marginal residuals",
+     pch = 20, cex = 1.2, cex.lab = 1.2, cex.axis = 1.3,
+     ylim = c(-1.3*max(abs(range(std.resm))),1.3*max(abs(range(std.resm)))))
+abline(h = 0, lty = 3)
+```
+
+```{r plot3}
+plot(1:n, Ver.star, xlab = "Unit indicies",
+     ylab = "Standardused measure of adequacy",
+     pch = 20, cex = 1.2, cex.lab = 1.2, cex.axis = 1.3,
+     ylim = c(-1.3*max(abs(range(Ver.star))),1.3*max(abs(range(Ver.star)))))
+abline(h = 0, lty = 3)
+```
+
+## Conditional residuals
+
+```{r variance of conditional residuals}
+mat1 <- matrix(c(as.vector(fit$VarU[[1]]$yield), rep(0, 16)), 4, 8)
+mat2 <- matrix(c(rep(0, 16), as.vector(fit$VarU[[2]]$yield)), 4, 8)
+Gam <- rbind(mat1, mat2)
+
+R <- V - Z %*% Gam %*% t(Z)
+
+var.resc <- R %*% Q %*% R
+```
+
+```{r standardised conditional residuals}
+std.resc <- resc/sqrt(diag(var.resc))
+```
+
+```{r plot4}
+plot(x = 1:nrow(df), y = std.resc, xlab = "Observation indices",
+     ylab = "Standardised conditional residuals", 
+     pch = 20, cex = 1.2, cex.lab = 1.2, cex.axis = 1.3,
+     ylim = c(-1.3*max(abs(range(std.resc))),1.3*max(abs(range(std.resc)))))
+abline(h=0, lty=3)
+```
+
+```{r plot5}
+plot(x = fitted, y = std.resc, 
+     xlab = "Fitted values", ylab = "Standardised conditional residuals",
+     pch = 20, cex = 1.2, cex.lab = 1.2, cex.axis = 1.3,
+     ylim = c(-1.3*max(abs(range(std.resc))),1.3*max(abs(range(std.resc)))))
+abline(h=0, lty = 3)
+```
+
+
+```{r Fraction of confouding}
+ident <- diag(N)
+auxnum <- R %*% Q %*% Z %*% Gam %*% t(Z) %*% R
+auxden <- R %*% Q %*% R
+CF <- diag(auxnum)/diag(auxden)
+```
+
+```{r squart root of a matrix}
+sqrt.matrix <- function(mat) {
+                mat <- as.matrix(mat)
+                singular_dec <- svd(mat,LINPACK = F)
+                U <- singular_dec$u
+                V <- singular_dec$v
+                D <- diag(singular_dec$d)
+                sqrtmatrix <- U %*% sqrt(D) %*% t(V)
+        }
+```
+
+### fix it please!
+```{r least confounded residuals ???}
+R.half <- sqrt.matrix(R)
+
+# R_half <- expm::sqrtm(R)
+
+auxqn <- eigen((R.half %*% Q %*% R.half), symmetric = T, only.values = FALSE)
+
+lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(sqrt.matrix(R[1:N,1:N]))
+
+var.resmcp <- lt %*% var.resc[1:N,1:N] %*% t(lt)
+
+resmcp <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+```
+
+```{r plot6}
+qqnorm
+```
+
+## Random effects residuals
+
+Variance of predicted errors for the random effects:
+\begin{align*}
+Var(\hat{\mathbf{b}}_i - \mathbf{b}_i) &= Var(\hat{\mathbf{b}}_i) + Var(\mathbf{b}_i) - Cov(\mathbf{b}_i, \hat{\mathbf{b}}_i) - Cov(\hat{\mathbf{b}}_i, \mathbf{b}_i) \\
+&=Var(\mathbf{\Gamma Z^\top Q y}) + Var(\mathbf{b}_i) - Cov(\mathbf{\Gamma Z^\top Q y}, \mathbf{b}_i) - Cov(\mathbf{b}_i, \mathbf{\Gamma Z^\top Q y})
+&=\mathbf{\Gamma Z^\top Q Z \Gamma} + \mathbf{\Gamma} - 2 \mathbf{\Gamma Z^\top Q Z \Gamma} \\
+&= \mathbf{\Gamma} - \mathbf{\Gamma Z^\top Q Z \Gamma} + \mathbf{\Gamma}
+\end{align*}
+
+### This is drived from formula which should be same as the `fit$PevU`
+However, they are not the same. Could you help me to correct them?
+
+```{r THIS IS NOT CORRECT}
+pred.er.var <- Gam - Gam %*% t(Z) %*% Q %*% Z %*% Gam
+Mi <- t(b_hat) %*% MASS::ginv(pred.er.var) %*% b_hat
+#Gam
+#pred.er.var
+```
+
+```{r prediction error varainace of BLUPs}
+pev.1 <- matrix(c(as.vector(fit$PevU$`Clemson:gen`$yield), rep(0,16)), 4,8)
+pev.2 <- matrix(c(rep(0,16),as.vector(fit$PevU$`Tifton:gen`$yield)), 4, 8)
+pev <- rbind(pev.1, pev.2)
+```
+
+### Manhalanobis's distance **Not sure**
+
+```{r Mahalanobis's distance}
+Maha_dist <- vector("list", n)
+for (i in 1:n){
+  Maha_dist[[i]] <- t(b_hat[i]) %*% MASS::ginv(pev[i,i]) %*% b_hat[i]
+  dist <- unlist(Maha_dist)
+}
+```
+
+```{r plot7}
+plot(x = 1:n, y = dist, xlab = "Unit indices", ylab = "Mahalanobis's distance",
+     pch = 20, cex = 1.2, cex.lab = 1.2, cex.axis = 1.3,
+     ylim = c(-1.3*max(abs(range(dist))),1.3*max(abs(range(dist)))))
+abline(h=0, lty = 3)
+```
+
+```{r plot8}
+set.seed(26686953)
+z <- rchisq(n,q)
+plot(sort(z), sort(dist), xlab = "Chi-squared quantiles", ylab = "Mahalanobis's distance")
+```
+
+# nullabor for lineup
+
+I found that I have to reproduce the $beta$, $b$, $\Omega$... for each model (19 times). However, I forgot the code to combine them in one list in tibble..
+
+```{r simulate.19 data}
+set.seed(12345)
+nsim <- 19
+simdat <- purrr::map_dfr(1:nsim, function(i){
+  ysim <- MASS::mvrnorm(n = 1, mu = X %*% beta_hat, Sigma = V)
+  simdat <- data.frame(ysim, loc = as.factor(df$loc), gen = as.factor(df$gen)) 
+  simfit <- mmer(ysim ~ 1 + loc,
+                 random =~vs(ds(loc), gen, Gu = A),
+                 rcov =~units,
+                 data = simdat)
+  # marginal residuals
+  simbeta <- simfit$Beta$Estimate
+  simb <- unlist(simfit$U)
+  simresm <- ysim - X %*% simbeta
+  simOmega <- solve(simfit$Vi)
+  simiOmega <- simfit$Vi
+  sim.var.resm <- simOmega - X %*% solve((t(X) %*% simiOmega %*% X)) %*% t(X)
+  sim.std.resm <- simresm/sqrt(diag(sim.var.resm))
+  # conditional residuals
+  simresc <- ysim - X %*% simbeta - Z %*% simb
+  sim.var.beta <- solve((t(X) %*% simiOmega %*% X)) # predicted variance of fixed effect
+  simQ <- simiOmega - simiOmega %*% X %*% sim.var.beta %*% t(X) %*% simiOmega
+  simmat1 <- matrix(c(as.vector(simfit$VarU[[1]]$ysim), rep(0, 16)), 4, 8)
+  simmat2 <- matrix(c(rep(0, 16), as.vector(fit$VarU[[2]]$ysim)), 4, 8)
+  simGam <- rbind(simmat1, simmat2)
+  simR <- simOmega - Z %*% simGam %*% t(Z)
+  sim.var.resc <- simR %*% simQ %*% simR
+  sim.std.resc <- simresc/sqrt(diag(sim.var.resc))
+  tibble::tibble(.n = i, list(simfit), fitted = fitted(simfit) ,sim.std.resm, sim.std.resc)
+})
+
+#simdat$`list(simfit)`[[1]]$fitted
+simdat$index <- rep(seq_len(nrow(df)), nsim)
+```
+
+
+```{r true data}
+true <- data.frame(y = df$yield, loc = df$loc, gen = df$gen)
+true.df <- data.frame(true, sim.std.resm = std.resm, sim.std.resc = std.resc, fitted = fitted(fit), index = seq.int(nrow(true.df)))
+```
+
+```{r lineup_plot1}
+qplot(x = fitted, y = sim.std.resm, data = true.df, geom = "point") %+% 
+  lineup(true = true.df, samples = simdat) + 
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank())
+```
+
+```{r lineup_plot2}
+qplot(x = index, y = sim.std.resm, data = true.df, geom = "point") %+% 
+  lineup(true = true.df, samples = simdat) + 
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank())
+```
+
+```{r lineup_plot4}
+qplot(x = index, y = sim.std.resc, data = true.df, geom = "point") %+% 
+  lineup(true = true.df, samples = simdat) + 
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank())
+```
+
+```{r lineup_plot5}
+qplot(x = fitted, y = sim.std.resc, data = true.df, geom = "point") %+% 
+  lineup(true = true.df, samples = simdat) + 
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank())
+```
+
+
+
+
+
+
+
+
+
+###################################### old version #######################################
+
+```{r values}
+
+count(df, gen)# what is the within unit
+
+# simulate y
+MASS::mvrnorm(n = 1, mu = X %*% beta_hat, Sigma = Sigma)
+
+Sigmai_sqrt <- expm::sqrtm(fit$Vi)
+
+# residuals
+
+# random effects residuals
+resre <- Z %*% b_hat; resre <- resre[,1]
+
+vareps <- Sigmai_sqrt %*% resm; vareps <- vareps[,1]
+tvar <- Sigma - X %*% solve(t(X) %*% Sigmai %*% X) %*% t(X)
+smres <- resm/sqrt(diag(tvar))
+
+df2 <- tibble(y, resm, resc, resre, smres, fitted = fit$fitted[,1])
+```
+
+```{r plot 1}
+ggplot(data = df2, mapping = aes(x = fitted, y = smres)) +
+  geom_point() + geom_hline(color = "red", yintercept = 0)
+```
+
+```{r plot2}
+ggplot(data = df2, mapping = aes(x = 1:nrow(df), y = smres)) +
+  geom_point() + geom_hline(color = "red", yintercept = 0)
+```
+
+```{r adequacy measure of the within-unit covariance structure}
+I32 <- diag(32)
+
+Vi <- Matrix::norm(x = I32 - vareps %*% t(vareps), type = "2")
+stdVi <- sqrt(Vi)/32
+```
+
+???? quit confused with how to figure out the within-unit covariance structure Vi, from above it is just a scalar.
+```{r plot 3}
+
+```
+
+```{r}
+Q <- Sigmai - Sigmai %*% X %*% solve(t(X) %*% Sigmai %*% X) %*% t(X) %*% Sigmai
+#G <- matrix(unlist(fit$VarU), 8,8) # this may not be correct
+
+mat1 <- matrix(c(as.vector(fit$VarU[[1]]$yield), rep(0, 16)), 4, 8)
+mat2 <- matrix(c(rep(0, 16), as.vector(fit$VarU[[2]]$yield)), 4, 8)
+G <- rbind(mat1, mat2)
+
+R <- Sigma - Z %*% G %*% t(Z)
+
+vare_hat <- R %*% Q %*% R
+
+resc <- y - X %*% beta_hat - Z %*% b_hat; resc <- resc[,1]
+scres <- resc/sqrt(diag(vare_hat))
+
+df3 <- tibble(y, resc, scres, fitted = fit$fitted[,1])
+```
+
+Presence of outlying observations ($\mathbf{y}_{ij}$)
+```{r plot 4}
+ggplot(df3, aes(1:nrow(df), scres)) + geom_point() +
+  geom_hline(yintercept = 0, color = "red")
+```
+
+There may be an outlying observation at the left right coner..
+
+Homoskedasticity of conditional errors ($\mathbf{e}_{ij}$)
+```{r plot 5}
+ggplot(df3, aes(fitted, scres)) + geom_point() +
+  geom_hline(color = "red", yintercept = 0)
+```
+
+
+Normality of conditional errors
+```{r plot 6}
+
+```
+how to get the $\mathbf{L}$ and $\Lambda$??
+Is the $\mathbf{L}$ comes from unit-specific linear combinations of the form
+$$\mathbf{L}_i = \mathbf{K}_1^\top \boldsymbol{\beta} + \mathbf{K}_2^\top \mathbf{b}_i$$
+
+How to know $\mathbf{K}_1$ and $\mathbf{K}_$..
+
+```{r}
+pev <- fit$PevU
+mat1 <- matrix(c(as.vector(fit$VarU[[1]]$yield), rep(0, 16)), 4, 8)
+mat2 <- matrix(c(rep(0, 16), as.vector(fit$VarU[[2]]$yield)), 4, 8)
+matrix(c(as.vector(fit$PevU[[1]]$yield)),4,4)
+matrix(c(as.vector(fit$PevU[[2]]$yield)),4,4)
+
+M <- matrix(c((fit$PevU[[1]]$yield)))
+```
+
+Presence of outlying subjects
+```{r plot 7}
+
+```
+
+Normality of the random effects
+```{r plot 8}
+
+```
+

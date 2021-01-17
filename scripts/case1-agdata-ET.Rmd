@@ -1,0 +1,96 @@
+---
+title: "Case: Agricultural Data"
+date: "`Sys.Date()`"
+output:
+  html_document
+---
+
+```{r setup, warning = FALSE, message = FALSE}
+library(agridat) # various ag data sets
+library(sommer) # for fitting mixed models
+library(tidyverse)
+library(ggplot2)
+data(bridges.cucumber)
+df <- bridges.cucumber %>% 
+  mutate(rowf = factor(row),
+         colf = factor(col))
+A <- diag(nlevels(df$gen))
+rownames(A) <- colnames(A) <- levels(df$gen)
+```
+
+```{r data-summary}
+skimr::skim(df)
+```
+
+
+```{r}
+fit <- mmer(yield ~ 1 + loc,
+            # random: random effects
+            # vs(ds(x), y): diagonal covariance structure for the "y" covariate for all 
+            # levels of the factor covariate "x"
+            random =~ vs(ds(loc), gen, Gu = A),
+            # rcov: error term
+            rcov =~ units,
+            data = df)
+
+randef(fit)
+
+# data frame of fixed effects (BLUEs)
+fit$Beta
+
+# list for each random effect (BLUPs)
+fit$U
+
+# residual values (Marginal residuals)
+fit$residuals
+
+
+
+
+plot(fit)
+```
+
+```{r values}
+y <- df$yield
+# becareful that the column order of X & Z are correct
+X <- model.matrix(~loc, data = df)
+beta_hat <- fit$Beta$Estimate
+Z <- model.matrix(~gen:loc - 1, data = df) 
+b_hat <- unlist(fit$U)
+
+# to simulate y 
+Sigma <- solve(fit$Vi)
+MASS::mvrnorm(n = 1, X %*% beta_hat, Sigma)
+           
+
+Sigmai <- fit$Vi
+Sigmai_sqrt <- expm::sqrtm(Sigmai)
+
+resm <- y - X %*% beta_hat; resm <- resm[,1]
+# fit$residuals is the marginal residual
+all(resm==fit$residuals)
+resc <- y - X %*% beta_hat - Z %*% b_hat; resc <- resc[,1]
+resr <- Z %*% b_hat; resr <- resr[,1]
+sresm <- Sigmai_sqrt %*% resm; sresm <- sresm[,1]
+
+df2 <- tibble(y, resm, resc, resr, sresm, fitted = fit$fitted[,1])
+```
+
+```{r singer-plot1}
+# FIXME, sresm is not standardised residual!!
+ggplot(df2, aes(fitted, sresm)) + 
+  geom_point() + geom_hline(color = "red", yintercept = 0)
+```
+
+
+```{r singer-plot2}
+# FIXME, sresm is not standardised residual!!
+ggplot(df, aes(x = 1:nrow(df), sresm)) + geom_point() + 
+  geom_hline(color = "red", yintercept = 0)
+
+
+library(lme4)
+lme4:::simulate.merMod
+fm1 <- lmer(Reaction ~ Days + (Days | Subject), sleepstudy)
+```
+

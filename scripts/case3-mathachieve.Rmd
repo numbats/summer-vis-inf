@@ -1,0 +1,322 @@
+---
+title: "Case for MathAchieve and MathAchSchool"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lme4)
+library(nlme)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(purrr)
+library(ggbeeswarm)
+library(stringr)
+library(colorspace)
+library(nullabor)
+library(ggforce)
+```
+
+Each row in `MathAchieve` represents each of the 7185 students within 160 schools. Each row in `MathAchSchool` represents each of 160 schools.
+
+[http://www.stat.rutgers.edu/home/yhung/Stat586/Mixed%20model/appendix-mixed-models.pdf]
+
+The variables that we are going to use:
+- School
+- SES
+- MathAch
+- Sector
+- MEANSES
+
+From the `MathAchieve` data set,
+
+- school-level variable contains
++ School
++ MEANSES
+- student-level variable contains
++ Minority
++ Sex
++ MathAch
+
+```{r}
+data("MathAchieve")
+MathAchieve
+names(gsummary(MathAchieve,
+               from = ~School, # School specific
+               inv = T))
+summary(MathAchieve)
+```
+
+As the school size is not same, we'd like to have a look at the size for each school.
+
+```{r}
+sch_size <- MathAchieve %>% group_by(School) %>% summarise(n = n(), .groups = "keep")
+sch_size_mean <- mean(sch_size$n)
+
+d1 <- sch_size %>% filter(n > sch_size_mean)
+#d1[d1$School == 1224,]
+d <- tibble(MathAchieve %>% filter(School %in% d1$School))
+#length(unique(d$School)) # 90 schools
+#str(d) # 4838
+#d %>% group_by(School) %>% summarise(n = n())
+```
+
+
+```{r}
+ggplot(d, aes(SES, MathAch)) + geom_point() + facet_wrap_paginate(~School, nrow = 5, ncol = 5, page = 4) + geom_smooth(method = "lm", se = F)
+```
+
+
+
+```{r}
+ggplot(d, aes(Sex, MathAch)) + geom_boxplot()
+```
+
+- Males' math score is greater than females'
+
+```{r}
+ggplot(d, aes(Minority, MathAch)) + geom_boxplot()
+```
+
+- No minority tends to have higher scores
+
+```{r}
+colnames(d)[5] <- c("y")
+ma.mod <- lmer(y ~ Minority + SES + Sex + (SES|School), data = d)
+
+all(getME(ma.mod, "X") == model.matrix(~Minority + SES + Sex, data = d))
+all(getME(ma.mod, "Z") == dim(model.matrix(~-1 + School, data = d)))
+```
+
+```{r fitfn}
+extract.fitted.mod <- function(mod, data){
+  N <- getME(mod, "n")
+  schools <- unique(data$School)
+  nschools <- length(schools)
+
+  y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- fixef(mod)
+  Z <- getME(mod, "Z")
+  u <- c(ranef(mod)$School[,1], ranef(mod)$School[,2])
+  q <- getME(mod, "q")
+
+  vc <- as.data.frame(VarCorr(mod))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp == 'School'][1] * diag(nschools)
+  G2 <- vc$vcov[vc$grp == 'School'][2] * diag(nschools)
+  G <- Matrix::bdiag(G1, G2)
+  G[lower.tri(G)] <- vc$vcov[vc$grp == 'School'][3]
+  G[upper.tri(G)] <- vc$vcov[vc$grp == 'School'][3]
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(mod) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(mod) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted_df <- data %>% 
+    mutate(
+      fitted = as.vector(X %*% beta),
+      resm = y - fitted,
+      resc = as.vector(y - fitted - Z %*% u),
+      index = 1:nrow(data)) %>% 
+    mutate(resm_std = resm/sqrt(diag(varMargRes)[index]),
+           resc_std = resc/sqrt(diag(varCondRes)[index])) %>% 
+    ungroup()
+  
+  return(fitted_df)
+}
+```
+
+```{r}
+ma.fitted <- extract.fitted.mod(ma.mod, d)
+```
+
+```{r}
+ggplot(ma.fitted, aes(index, resm_std)) + geom_point()
+ggplot(ma.fitted, aes(index, resc_std)) + geom_point()
+ggplot(ma.fitted, aes(sample = resc_std)) + geom_qq() + geom_qq_line()
+```
+
+
+
+```{r}
+fit_bryk <- Bryk %>% 
+  mutate(fitted = as.vector(X %*% beta),
+         resm = MathAch - fitted, 
+         resc = MathAch - fitted - as.vector(Z %*% u),
+         index = 1:n()) %>% 
+  rowwise() %>% 
+  mutate(resm_std = resm / sqrt(diag(varMargRes)[index]),
+         resc_std = resc / sqrt(diag(varCondRes)[index])) %>% 
+  ungroup()
+```
+
+```{r}
+head(fit_bryk)
+```
+
+
+Lesaffre and Verbeke comment that when the within-unit covariance structure is adequate, $V_i = ||I_{m_i} - \varepsilon_i \varepsilon^\top||^2$, where $\varepsilon_i = \hat \Omega ^{-1/2} \hat \xi$ should be close to zero. However, Singer consider replacing $\varepsilon_i$ in $V_i$ with the standardised marginal residuals $\hat \xi_i^* = [\hat V(\hat \xi_i)]^{-1/2} \hat \xi_i$, where $V(\hat \xi_i)$ refers to the diagonal block of $\Omega - X(X^\top \Omega^{-1} X)^{-1} X^\top$ associated to the $i$ unit.
+
+```{r}
+unit_df <- expand_grid(school) %>% 
+  # cannot follow Vi quit well
+  mutate(Vi = map_dbl(school, ~{
+    ind <- Bryk %>% 
+      mutate(index = 1:n()) %>% 
+      filter(School == .x) %>% 
+      pull(index)
+    mi <- length(ind)
+    # standardised marginal residual
+    Ei <- solve(expm::sqrtm(varMargRes[ind, ind])) %*% fit_bryk$resm[ind]
+    sqrt(sum((diag(mi) - Ei %*% t(Ei))^2)) / mi
+  }),
+  Mi = as.vector(t(u) %*% solve(varU) %*% u)
+  )
+```
+
+## Diagnostic Plot 1: Linearity of fixed effects
+
+```{r}
+ggplot(fit_bryk, aes(fitted, resm_std)) +
+  geom_hline(yintercept = 0) +
+  geom_point()
+```
+
+## Diagnostic Plot 2: Prescence of outlying observations
+
+```{r}
+ggplot(fit_bryk, aes(index, resm_std)) + geom_point() + geom_hline(yintercept = 0)
+```
+
+## Diagnostic Plot 3: Within-units covariance matrix
+
+```{r}
+ggplot(unit_df, aes(1:nrow(unit_df), Vi)) + geom_point()+ xlab("Unit indicies") + ylab("Modified Lesaffre-Verbeke index")
+```
+
+## Diagnostic Plot 4: Prescense of outlying observations using conditional residual
+
+```{r}
+ggplot(fit_bryk, aes(index, resc_std)) + geom_point() + geom_hline(yintercept = 0)
+```
+
+## Diagnostic Plot 5: Homoskedasticity of conditional errors 
+
+```{r}
+ggplot(fit_bryk, aes(fitted, resc_std)) + geom_point() + geom_hline(yintercept = 0)
+```
+
+## Diagnostic Plot 6: Normality of conditional errors
+
+```{r}
+ggplot(fit_bryk, aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red")
+```
+
+## Diagnostic Plot 7: Presencse of outlying subjects 
+
+```{r}
+ggplot(unit_df, aes(1:nrow(unit_df), Mi)) + geom_point() + xlab("Unit index") + ylab("Manhalanobis distance")
+```
+
+## Diagnostic Plot 8: Normality of the random effects
+
+```{r}
+ggplot(unit_df, aes(sample = Mi)) + 
+  geom_qq(distribution = stats::qchisq,
+          dparams = list(df = q)) +
+  geom_qq_line(color = "red",
+               distribution = stats::qchisq,
+               dparams = list(df = q))
+```
+
+```{r}
+d <- lineup(null_permute("MathAch"), Bryk, pos = 1)
+```
+
+```{r}
+simdat <- purrr::map_dfr(1:20, function(i){
+  df <- d %>% filter(.sample == i)
+  m <- lmer(MathAch ~ SES + Sector + Minority + Sex + (1|School), data = df)
+  
+  N <- nrow(df)
+  y <-  df$MathAch
+  X <- model.matrix(~ SES + Sector + Minority + Sex, data = df)
+  beta <- fixef(m)
+  Z <- model.matrix(~ School - 1, data = df)
+  u <- ranef(m)$School[,1]
+  q <- length(u)
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G <- vc$vcov[vc$grp == "School"] * diag(q)
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+  varMargRes <- Sigma - X %*% solve(t(X) %*% solve(Sigma) %*% X) %*% t(X)
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r}
+df <- d %>% filter(.sample == 2)
+m <- lmer(MathAch ~ SES + Sector + Minority + Sex + (1|School), data = df)
+
+N <- nrow(df)
+y <-  df$MathAch
+X <- model.matrix(~ SES + Sector + Minority + Sex, data = df)
+beta <- fixef(m)
+Z <- model.matrix(~ School - 1, data = df)
+u <- ranef(m)$School[,1]
+q <- length(u)
+vc <- as.data.frame(VarCorr(m))
+R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+G <- vc$vcov[vc$grp == "School"] * diag(q)
+Sigma <- Z %*% G %*% t(Z) + R
+Sigma_inv <- solve(Sigma)
+varMargRes <- Sigma - X %*% solve(t(X) %*% solve(Sigma) %*% X) %*% t(X)
+P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+varCondRes <- R %*% P %*% R
+varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+fitted = as.vector(X %*% beta)
+resm = y - fitted
+resc = y - fitted - as.vector(Z %*% u)
+index = 1:nrow(df)
+resm_std = resm / sqrt(diag(varMargRes)[index])
+resc_std = resc / sqrt(diag(varCondRes)[index])
+```
+
+
+```{r}
+fit.sim  <- simulate(fit, nsim = 19, seed = 1234)
+fit.refit <- lapply(fit.sim, refit, object = fit)
+fit.simy <- lapply(fit.refit, function(x) getME(x, "y"))
+```
+
+```{r}
+fit.sim.y <- do.call("cbind", fit.simy)
+fit.sim.y <- reshape2::melt(fit.sim.y)[-1]
+names(fit.sim.y) <- c(".n", "y")
+fit.sim.y$.n <- as.numeric(str_extract(fit.sim.y$.n, "\\d+"))
+fit.sim.y$School <- rep(Bryk$School, 19)
+fit.sim.y$SES <- rep(Bryk$SES, 19)
+fit.sim.y$Sector <- rep(Bryk$Sector, 19)
+```

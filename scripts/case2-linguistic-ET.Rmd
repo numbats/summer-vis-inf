@@ -1,0 +1,2864 @@
+---
+title: "Example with linguistic data"
+output:
+  html_document:
+    code_folding: hide
+---
+
+Data is based on [this paper](https://arxiv.org/pdf/1308.5499.pdf). Also see [tutorial here](https://web.stanford.edu/class/psych252/section/Mixed_models_tutorial.html).
+
+```{r setup, include = FALSE}
+library(lme4)
+library(tidyverse)
+library(ggbeeswarm)
+library(colorspace)
+library(dplyr)
+library(nullabor)
+library(MASS)
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE#,
+  #cache.path = "cache/",
+  #cache = TRUE
+)
+df <- read_csv(here::here("data/politeness_data.csv")) %>% 
+  mutate(scenario = fct_reorder(factor(scenario), frequency, function(x) mean(x, na.rm = TRUE)),
+         subject = fct_reorder(subject, frequency, function(x) mean(x, na.rm = TRUE)))
+```
+
+The data contains `r nrow(df)` observations on the voice pitch (or frequency) from `r length(unique(df$subject))` subjects (3 females and 3 males) under `r length(unique(df$scenario))` scenarios with 2 attitudes (informal or polite). There is one missing value for subject `M4` for scenario 6 with polite attitude.
+
+We fixed the missing value by the mean value of the male with scenario 6 and polite attitude.
+
+```{r}
+df[39,]$frequency <-  round(as.numeric(df %>% filter(gender == "M", scenario == 6, attitude == "pol") %>% summarise(mean(frequency, na.rm = T))),1)
+
+df <- df[order(df$subject),]
+```
+
+
+
+```{r eda-plots}
+ggplot(df, aes(subject, frequency, fill = gender)) + 
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") + 
+  scale_fill_discrete_qualitative() 
+
+ggplot(df, aes(attitude, frequency,  fill = gender)) + 
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") + 
+  facet_grid(. ~ subject) + 
+  scale_fill_discrete_qualitative() 
+
+ggplot(df, aes(gender, frequency)) + 
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") + 
+  facet_grid(. ~ attitude) + 
+  scale_fill_discrete_qualitative() 
+
+ggplot(df, aes(scenario, frequency)) + 
+  geom_boxplot() +
+  geom_beeswarm(aes(color = gender)) + 
+  scale_color_discrete_qualitative()
+```
+
+We fit the following model:
+
+$$\begin{array}\texttt{frequency}_{i} &=& \beta_0 + \beta_1\mathbb{I}(\texttt{attitude}_{i}=\texttt{pol}) + \beta_2 \mathbb{I}(\texttt{gender}_{i}=\texttt{M}) +\\ && u_1\mathbb{I}(\texttt{subject}_i=\texttt{F1})+ u_2\mathbb{I}(\texttt{subject}_i=\texttt{F2}) + u_3\mathbb{I}(\texttt{subject}_i=\texttt{F3}) + u_4\mathbb{I}(\texttt{subject}_i=\texttt{M1})+ u_5\mathbb{I}(\texttt{subject}_i=\texttt{M2})+ u_6\mathbb{I}(\texttt{subject}_i=\texttt{M3}) + \\ && u_7\mathbb{I}(\texttt{scenario}_i=\texttt{1}) + u_8\mathbb{I}(\texttt{scenario}_i=\texttt{2}) + u_9\mathbb{I}(\texttt{scenario}_i=\texttt{3}) + u_{10}\mathbb{I}(\texttt{scenario}_i=\texttt{4}) + u_{11}\mathbb{I}(\texttt{scenario}_i=\texttt{5}) + u_{12}\mathbb{I}(\texttt{scenario}_i=\texttt{6}) +\\&& u_{13}\mathbb{I}(\texttt{scenario}_i=\texttt{7}) + e_i\end{array}$$
+assuming that $\boldsymbol{u} = (u_1, ..., u_{13})^\top \sim N(\boldsymbol{0}, \mathbf{G})$ and $\boldsymbol{e} = (e_1, ..., e_{84})^\top = \sim N(\boldsymbol{0}, \sigma^2\mathbf{I}_{84})$, where $\mathbf{G}=\begin{bmatrix}\sigma^2_{\texttt{subject}}\mathbf{I}_6 & \mathbf{0}_{6\times 7}\\ \mathbf{0}_{7\times 6} & \sigma^2_{\texttt{scenario}}\mathbf{I}_7\end{bmatrix}.$
+
+```{r fitfn}
+lin.extract.fitted.mod <- function(mod, data){
+  N <- nrow(data)
+  subjects <- unique(data$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(data$scenario)
+  nscenario <- length(scenarios)
+
+  y <- data$y
+  X <- model.matrix(~attitude + gender, data = data)
+  beta <- fixef(mod)
+  Z1 <- model.matrix(~scenario - 1, data = data)
+  Z2 <- model.matrix(~subject - 1, data = data)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(mod)$scenario[,1], ranef(mod)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(mod))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv 
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted_df <- data %>% 
+    dplyr::mutate(
+      fitted = as.vector(X %*% beta),
+      resm = y - fitted,
+      resc = y - fitted - as.vector(Z %*% u),
+      index = 1:n()) %>% 
+    mutate(resm_std = resm/sqrt(diag(varMargRes)[index]),
+           resc_std = resc/sqrt(diag(varCondRes)[index])) %>% 
+    ungroup()
+  
+  return(fitted_df)
+}
+```
+
+```{r unitfn}
+lin.extract.unit.mod <- function(mod, data){
+  N <- nrow(data)
+  subjects <- unique(data$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(data$scenario)
+  nscenario <- length(scenarios)
+
+  y <- data$y
+  X <- model.matrix(~attitude + gender, data = data)
+  beta <- fixef(mod)
+  Z1 <- model.matrix(~scenario - 1, data = data)
+  Z2 <- model.matrix(~subject - 1, data = data)
+  Z <- cbind(Z1, Z2)  
+  u <- c(ranef(mod)$scenario[,1], ranef(mod)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(mod))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  fitted <-  as.vector(X %*% beta)
+  resm <-  y - fitted
+  resc <-  y - fitted - as.vector(Z %*% u)
+  
+  unit_df <- expand_grid(subjects, scenarios) %>% 
+    dplyr::mutate(Vi = map2_dbl(subjects, scenarios, ~{
+                        ind <- data %>% 
+                          dplyr::mutate(index = 1:n()) %>% 
+                          filter(subject==.x,
+                                 scenario==.y) %>% 
+                          pull(index)
+                         mi <- length(ind)
+                        # standardised marginal residual
+                        Ei <- solve(expm::sqrtm(varMargRes[ind, ind])) %*% resm[ind]
+                        v1 <- (diag(mi)- Ei %*% t(Ei))
+                        sqrt(sum(diag(v1 %*% t(v1)))) / mi
+                      }),
+         Mi = as.vector(t(u) %*% solve(varU) %*% u),
+         index = 1:n()
+         )
+  
+  return(unit_df)
+}
+```
+
+```{r}
+lin.extract.lcr.mod <- function(mod, data){
+  N <- nrow(data)
+  subjects <- unique(data$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(data$scenario)
+  nscenario <- length(scenarios)
+
+  y <- data$y
+  X <- model.matrix(~attitude + gender, data = data)
+  beta <- fixef(mod)
+  Z1 <- model.matrix(~scenario - 1, data = data)
+  Z2 <- model.matrix(~subject - 1, data = data)
+  Z <- cbind(Z1, Z2)  
+  u <- c(ranef(mod)$scenario[,1], ranef(mod)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(mod))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted <-  as.vector(X %*% beta)
+  resm <-  y - fitted
+  resc <-  y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(data)
+  resm_std <-  resm/sqrt(diag(varMargRes)[index])
+  resc_std = resc/sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+
+  reslc_lin <- tibble::tibble(reslc_lin)
+  
+  return(reslc_lin)
+}
+```
+
+```{r simulatefn}
+lin.sim <- function(mod, data, nsim = 19, seed, std = FALSE){
+  fit.sim <- simulate(mod, nsim = nsim, seed = seed)
+  fit.refit <- lapply(fit.sim, refit, object = mod)
+  fit.simy <- lapply(fit.refit, function(x) getME(x, 'y'))
+  fit.simy.y <- do.call("cbind", fit.simy)
+  fit.simy.y <- reshape2::melt(fit.simy.y)[-1]
+  names(fit.simy.y) <- c(".n", "y")
+  fit.simy.y$.n <- as.numeric(str_extract(fit.simy.y$.n, "\\d+"))
+  fit.simy.y$attitude <- rep(data$attitude, 19)
+  fit.simy.y$gender <- rep(data$gender, 19)
+  fit.simy.y$subject <- rep(data$subject, 19)
+  fit.simy.y$scenario <- rep(data$scenario, 19)
+  return(fit.simy.y)
+}
+```
+
+
+```{r model}
+colnames(df)[5] <- c("y")
+#df <- na.omit(df)
+fit <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+
+lin.fitted <- lin.extract.fitted.mod(fit, df)
+lin.unit <- lin.extract.unit.mod(fit, df)
+lin.lcr <- lin.extract.lcr.mod(fit, df)
+```
+
+
+## Diagnostic Plot 1: Linearity of fixed effects
+
+By using the marginal residual versus explanatory variables is better than versus fitted value.
+
+```{r plot1}
+ggplot(lin.fitted, aes(fitted, resm_std)) + 
+  geom_hline(yintercept = 0) +
+  geom_point()
+
+ggplot(lin.fitted, aes(interaction(attitude, gender), resm_std)) + 
+  geom_boxplot() 
+```
+
+# Diagnostic Plot 2: Prescence of outlying observations
+
+```{r plot2}
+ggplot(lin.fitted, aes(index, resm_std, 
+                   color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) + 
+  scale_color_discrete_qualitative()
+
+lin.fitted %>% 
+  arrange(scenario) %>% 
+  dplyr::mutate(index = 1:n()) %>% 
+  ggplot(aes(index, resm_std, color = scenario)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) + 
+  scale_color_discrete_qualitative()
+```
+
+# Diagnostic Plot 3: Within-units covariance matrix
+
+I think this works better when there is a more complex covariance structure so perhaps omit from using this. 
+
+```{r plot3}
+# Dashed line: third quartile + 1.5 interquartile range
+LSlesverb <- as.numeric(quantile(lin.unit$Vi,prob = 0.75, na.rm = T) + 1.5*(quantile(lin.unit$Vi, prob = 0.75, na.rm = T) - quantile(lin.unit$Vi,prob = 0.25, na.rm = T)))
+
+ggplot(lin.unit, aes(index, Vi)) + 
+  geom_point() + 
+  geom_hline(yintercept = LSlesverb, lty = 2) +
+  geom_text(
+    data = lin.unit %>% 
+      filter(Vi>LSlesverb),
+    aes(label = index),
+    nudge_x = 0.35, nudge_y = 0.35,
+    size = 2
+  )
+```
+
+
+# Diagnostic Plot 4: Prescense of outlying observations using conditional residual
+
+```{r plot4}
+ggplot(lin.fitted, aes(index, resc_std, 
+                   color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 3, lty = 2) + 
+  scale_color_discrete_qualitative() + 
+  geom_text(
+    data = lin.fitted %>% 
+      filter(resc_std>3),
+    aes(label = index),
+    nudge_x = 0.35, nudge_y = 0.35,
+    size = 2
+  )
+
+lin.fitted %>% 
+  arrange(scenario) %>% 
+  dplyr::mutate(index = 1:n()) %>% 
+  ggplot(aes(index, resc_std, color = scenario)) + 
+  geom_point() + 
+  geom_hline(yintercept = 3, lty = 2) + 
+  scale_color_discrete_qualitative()
+```
+
+
+# Diagnostic Plot 5: Homoskedasticity of conditional errors 
+
+```{r plot5}
+ggplot(lin.fitted, aes(fitted, resc_std)) + 
+  geom_hline(yintercept = 0) +
+  geom_point()
+```
+
+# Diagnostic Plot 6: Normality of conditional errors
+
+$c^\top_k \hat e^*$
+
+## Standardised conditional residual
+
+```{r plot6}
+ggplot(lin.fitted, aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red")
+```
+## Least confounded residual
+
+```{r}
+ggplot(lin.lcr, aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red")
+```
+
+- The least confounded conditional residual seems not follow a normal distribution
+
+# Diagnostic Plot 7: Presencse of outlying subjects 
+
+```{r plot7}
+ggplot(lin.unit, aes(interaction(subjects, scenarios), Mi)) + 
+  geom_point()
+```
+
+# Diagnostic Plot 8: Normality of the random effects
+
+```{r plot8}
+u <- c(ranef(fit)$scenario[,1], ranef(fit)$subject[,1])
+q <- length(u)
+ggplot(lin.unit, aes(sample = Mi)) + 
+  geom_qq(distribution = stats::qchisq,
+          dparams = list(df = q)) +
+  geom_qq_line(color = "red",
+               distribution = stats::qchisq,
+               dparams = list(df = q))
+```
+
+## *Version 1 - "best" model
+
+```{r v1data}
+set.seed(3526)
+
+N <- nrow(df)
+nscenario <- length(unique(df$scenario))
+nsubject <- length(unique(df$subject))
+
+vc <- as.data.frame(VarCorr(fit))
+
+R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+G <- Matrix::bdiag(G1, G2)
+
+n <- getME(fit, "n")
+q <- getME(fit, "q")
+
+# normal error
+e <- mvrnorm(n = 1, mu = rep(0,n), Sigma = R)
+
+# normal random effects
+b <- mvrnorm(n = 1, mu = rep(0,q), Sigma = G)
+
+y <- as.vector(getME(fit, "X") %*% fixef(fit) + getME(fit, "Z") %*% b + e)
+
+v1.lin <- tibble(df[,-5], y)
+```
+
+```{r v1mod}
+v1.lin.mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = v1.lin)
+```
+
+```{r v1-extract}
+v1.lin.fitted <- lin.extract.fitted.mod(v1.lin.mod, v1.lin)
+v1.lin.lcr <- lin.extract.lcr.mod(v1.lin.mod, v1.lin)
+```
+
+# Data plots
+
+```{r v1-plots}
+ggplot(v1.lin.fitted, aes(index, resm_std, color = subject)) + geom_point() + geom_hline(yintercept = 0) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+ggplot(v1.lin.fitted, aes(index, resc_std, color = subject)) + geom_point() + geom_hline(yintercept = 0)
+ggplot(v1.lin.fitted, aes(sample = resc_std)) + geom_qq() + geom_qq_line(color = "red")
+ggplot(v1.lin.lcr, aes(sample = reslc_lin)) + geom_qq() + geom_qq_line(color = "red")
+```
+
+- The marginal residual seems to be scaled down as the outliers on the M4 subject and also one outlier in F3 subject.
+- The conditional residual seems to be normal and fewer outliers.
+- The conditional residual does not follow a normal distribution as there is a huge jump at the top.
+- The least confounded residual does not follow a normal distribution as well, since there is a jump at the middle and a heavy tail.
+
+
+
+
+
+
+
+
+### 1st replication
+
+```{r v11-sim}
+v11.sim <- lin.sim(v1.lin.mod, v1.lin, seed = 1234)
+```
+
+```{r fittednull-v11}
+v11.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v11.sim %>% filter(.n == i)
+  m <- lmer(y ~ 1 +attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v11}
+v11.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v11.sim %>% filter(.n == i)
+  m <- lmer(y ~ 1 +attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  
+  .n = i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+```{r v11n-plot}
+lineup(true = v1.lin.fitted, samples = v11.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(interaction(attitude, gender), resm_std)) +
+  geom_boxplot() +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+```
+
+```{r v11n-plot21}
+l11.1 <- lineup(true = v1.lin.fitted, samples = v11.lin.sim.fitted, pos = 7) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v11_1.png", 
+  plot = l11.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v11n-plot22}
+lineup(true = v1.lin.fitted, samples = v11.lin.sim.fitted, pos = 7) %>% 
+  ggplot(aes(index, resm_std, color = scenario)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5)
+```
+
+
+```{r v11n-plot4}
+l11.2 <- lineup(true = v1.lin.fitted, samples = v11.lin.sim.fitted, pos = 7) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v11_2.png", 
+  plot = l11.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v11n-plot5}
+lineup(true = v1.lin.fitted, samples = v11.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(fitted, resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5)
+```
+
+```{r v11n-plot6}
+l11.3 <- lineup(true = v1.lin.fitted, samples = v11.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v11_3.png", 
+  plot = l11.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r}
+l11.4 <- lineup(true = v1.lin.lcr, samples = v11.lin.sim.lcr, pos = 9) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v11_4.png", 
+  plot = l11.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+
+### 2nd replication
+
+```{r v12-sim}
+v12.sim <- lin.sim(v1.lin.mod, v1.lin, seed = 2492)
+```
+
+```{r fittednull-v12}
+v12.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v12.sim %>% filter(.n == i)
+  m <- lmer(y ~ 1 +attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v12}
+v12.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v12.sim %>% filter(.n == i)
+  m <- lmer(y ~ 1 +attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  
+  .n = i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+```{r v12n-plot1}
+lineup(true = v1.lin.fitted, samples = v12.lin.sim.fitted, pos = 7) %>% 
+  ggplot(aes(interaction(attitude, gender), resm_std)) +
+  geom_boxplot() +
+  facet_wrap(~.sample, ncol = 5)
+```
+
+```{r v12n-plot2}
+l12.1 <- lineup(true = v1.lin.fitted, samples = v12.lin.sim.fitted, pos = 7) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v12_1.png", 
+  plot = l12.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+
+```{r v12n-plot4}
+l12.2 <- lineup(true = v1.lin.fitted, samples = v12.lin.sim.fitted, pos = 7) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v12_2.png", 
+  plot = l12.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v12n-plot5}
+lineup(true = v1.lin.fitted, samples = v12.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(fitted, resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5)
+```
+
+```{r v12n-plot6}
+l12.3 <- lineup(true = v1.lin.fitted, samples = v12.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v12_3.png", 
+  plot = l12.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v12n-plot-lcr}
+l12.4 <- lineup(true = v1.lin.lcr, samples = v12.lin.sim.lcr, pos = 9) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v12_4.png", 
+  plot = l12.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+### 3st replication
+
+```{r v13-sim}
+v13.sim <- lin.sim(v1.lin.mod, v1.lin, seed = 9876)
+```
+
+```{r fittednull-v13}
+v13.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v13.sim %>% filter(.n == i)
+  m <- lmer(y ~ 1 +attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v13}
+v13.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v13.sim %>% filter(.n == i)
+  m <- lmer(y ~ 1 +attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  
+  .n = i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+```{r v13n-plot1}
+lineup(true = v1.lin.fitted, samples = v13.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(interaction(attitude, gender), resm_std)) +
+  geom_boxplot() +
+  facet_wrap(~.sample, ncol = 5)
+```
+
+```{r v13n-plot21}
+l13.1 <- lineup(true = v1.lin.fitted, samples = v13.lin.sim.fitted, pos = 13) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v13_1.png", 
+  plot = l13.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+
+```{r v13n-plot4}
+l13.2 <- lineup(true = v1.lin.fitted, samples = v13.lin.sim.fitted, pos = 13) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v13_2.png", 
+  plot = l13.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v13n-plot5}
+lineup(true = v1.lin.fitted, samples = v13.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(fitted, resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5)
+```
+
+```{r v13n-plot6}
+l13.3 <- lineup(true = v1.lin.fitted, samples = v13.lin.sim.fitted, pos = 4) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v13_3.png", 
+  plot = l13.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v13n-plot-lcr}
+l13.4 <- lineup(true = v1.lin.lcr, samples = v13.lin.sim.lcr, pos = 4) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v13_4.png", 
+  plot = l13.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+### 4th replication
+
+```{r v14-sim}
+v14.sim <- lin.sim(v1.lin.mod, v1.lin, seed = 6839)
+```
+
+```{r fittednull-v14}
+v14.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v14.sim %>% filter(.n == i)
+  m <- lmer(y ~ 1 +attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v14}
+v14.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v14.sim %>% filter(.n == i)
+  m <- lmer(y ~ 1 +attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  
+  .n = i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+```{r v14n-plot1}
+lineup(true = v1.lin.fitted, samples = v14.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(interaction(attitude, gender), resm_std)) +
+  geom_boxplot() +
+  facet_wrap(~.sample, ncol = 5)
+```
+
+```{r v14n-plot21}
+l14.1 <- lineup(true = v1.lin.fitted, samples = v14.lin.sim.fitted, pos = 13) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v14_1.png", 
+  plot = l14.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v14n-plot4}
+l14.2 <- lineup(true = v1.lin.fitted, samples = v14.lin.sim.fitted, pos = 13) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v14_2.png", 
+  plot = l14.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+- the conditional residual plot is less able to be identified than the marginal residiual
+
+```{r v14n-plot5}
+lineup(true = v1.lin.fitted, samples = v14.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(fitted, resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5)
+```
+
+```{r v14n-plot6}
+l14.3 <- lineup(true = v1.lin.fitted, samples = v14.lin.sim.fitted, pos = 4) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v14_3.png", 
+  plot = l14.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v14n-plot-lcr}
+l14.4 <- lineup(true = v1.lin.lcr, samples = v14.lin.sim.lcr, pos = 4) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v14_4.png", 
+  plot = l14.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+- Overall, it maybe the case that the least confounded residual is easier to be identified compared to standardised conditional residual based on version 1.
+
+## *Version 2
+
+I added the student t distribution to the error term.
+
+```{r}
+set.seed(1234)
+# multivariate t error term
+e <- as.vector(rmvt(1, sigma = R, df = 1))
+y <- as.vector(getME(fit, "X") %*% fixef(fit) + getME(fit, "Z") %*% b + e)
+v2.lin <- tibble(df[,-5], y)
+```
+
+```{r v2mod}
+v2.lin.mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = v2.lin)
+```
+
+```{r v2-extract}
+v2.lin.fitted <- lin.extract.fitted.mod(v2.lin.mod, v2.lin)
+v2.lin.lcr <- lin.extract.lcr.mod(v2.lin.mod, v2.lin)
+```
+
+# Data plots
+
+```{r v2-plots}
+lin21 <- ggplot(v2.lin.fitted, aes(index, resm_std, color = subject)) + geom_point() + geom_hline(yintercept = 0) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+ggplot(v2.lin.fitted, aes(sample = resc_std)) + geom_qq() + geom_qq_line(color = "red")
+ggplot(v2.lin.lcr, aes(sample = reslc_lin)) + geom_qq() + geom_qq_line(color = "red")
+```
+
+- There are more outlying observations presented in F3 subject compared with version 1
+- The subject M4 and M3 are not well fitted under the conditional residuals
+- Both conditional residual and conditional residual are not normally distributed.
+
+
+### 1st replication
+
+```{r v21-sim}
+v21.sim <- lin.sim(v2.lin.mod, v2.lin, seed = 1234)
+```
+
+```{r fittednull-v21}
+v21.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v21.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v21}
+v21.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v21.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  
+  .n = i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+```{r v21n-plot}
+lineup(true = v2.lin.fitted, samples = v21.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(interaction(attitude, gender), resm_std)) +
+  geom_boxplot() +
+  facet_wrap(~.sample, ncol = 5)
+```
+
+##### Outlying observations
+
+```{r v21n-plot21}
+l21.1 <- lineup(true = v2.lin.fitted, samples = v21.lin.sim.fitted, pos = 5) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v21_1.png", 
+  plot = l21.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+
+```{r v21n-plot4}
+l21.2 <- lineup(true = v2.lin.fitted, samples = v21.lin.sim.fitted, pos = 5) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v21_2.png", 
+  plot = l21.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+##### Checking normality
+
+```{r v21n-plot6}
+l21.3 <- lineup(true = v2.lin.fitted, samples = v21.lin.sim.fitted, pos = 8) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v21_3.png", 
+  plot = l21.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v21n-plot6-lcr}
+l21.4 <- lineup(true = v2.lin.lcr, samples = v21.lin.sim.lcr, pos = 8) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v21_4.png", 
+  plot = l21.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+### 2nd replication
+```{r v22-sim}
+v22.sim <- lin.sim(v2.lin.mod, v2.lin, seed = 2632)
+```
+
+```{r fittednull-v22}
+v22.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v22.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v22}
+v22.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v22.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  
+  .n = i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+```{r v22n-plot}
+lineup(true = v2.lin.fitted, samples = v22.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(interaction(attitude, gender), resm_std)) + 
+  geom_boxplot() +
+  facet_wrap(~.sample, ncol = 5)
+```
+##### Outlying observations
+
+```{r v22n-plot22}
+l22.1 <- lineup(true = v2.lin.fitted, samples = v22.lin.sim.fitted, pos = 5) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v22_1.png", 
+  plot = l22.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v22n-plot4}
+l22.2 <- lineup(true = v2.lin.fitted, samples = v22.lin.sim.fitted, pos = 5) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v22_2.png", 
+  plot = l22.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+##### Checking normality
+
+```{r v21n-plot6}
+l22.3 <- lineup(true = v2.lin.fitted, samples = v22.lin.sim.fitted, pos = 8) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v22_3.png", 
+  plot = l22.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v21n-plot6-lcr}
+l22.4 <- lineup(true = v2.lin.lcr, samples = v22.lin.sim.lcr, pos = 8) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v22_4.png", 
+  plot = l22.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+### 3rd replication
+```{r v21-sim}
+v23.sim <- lin.sim(v2.lin.mod, v2.lin, seed = 7374)
+```
+
+```{r fittednull-v21}
+v23.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v23.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v23}
+v23.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v23.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  
+  .n = i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+```{r v23n-plot}
+lineup(true = v2.lin.fitted, samples = v23.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(interaction(attitude, gender), resm_std)) +
+  geom_boxplot() +
+  facet_wrap(~.sample, ncol = 5)
+```
+
+##### Presence of outlying observations
+
+```{r v23n-plot21}
+l23.1 <- lineup(true = v2.lin.fitted, samples = v23.lin.sim.fitted, pos = 15) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v23_1.png", 
+  plot = l23.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v23n-plot}
+l23.2 <- lineup(true = v2.lin.fitted, samples = v23.lin.sim.fitted, pos = 15) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + geom_point() + 
+  geom_hline(yintercept = 0) + 
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v23_2.png", 
+  plot = l23.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+##### Checking normality
+
+```{r v23n-plot6}
+l23.3 <- lineup(true = v2.lin.fitted, samples = v23.lin.sim.fitted, pos = 20) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v23_3.png", 
+  plot = l23.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v21n-plot6-lcr}
+l23.4 <- lineup(true = v2.lin.lcr, samples = v23.lin.sim.lcr, pos = 20) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v23_4.png", 
+  plot = l23.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+### 4th replication
+```{r v21-sim}
+v24.sim <- lin.sim(v2.lin.mod, v2.lin, seed = 8821)
+```
+
+```{r fittednull-v21}
+v24.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v24.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v24}
+v24.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v24.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  
+  .n = i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+```{r v24n-plot}
+lineup(true = v2.lin.fitted, samples = v24.lin.sim.fitted, pos = 9) %>% 
+  ggplot(aes(interaction(attitude, gender), resm_std)) +
+  geom_boxplot() +
+  facet_wrap(~.sample, ncol = 5)
+```
+
+##### Presence of outlying observations
+```{r v21n-plot21}
+l24.1 <- lineup(true = v2.lin.fitted, samples = v24.lin.sim.fitted, pos = 15) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v24_1.png", 
+  plot = l24.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v24n-plot}
+l24.2 <- lineup(true = v2.lin.fitted, samples = v24.lin.sim.fitted, pos = 15) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + geom_point() + 
+  geom_hline(yintercept = 0) + 
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v24_2.png", 
+  plot = l24.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+##### Checking normality
+
+```{r v24n-plot6}
+l24.3 <- lineup(true = v2.lin.fitted, samples = v24.lin.sim.fitted, pos = 20) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v24_3.png", 
+  plot = l24.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v24n-plot6-lcr}
+l24.4 <- lineup(true = v2.lin.lcr, samples = v24.lin.sim.lcr, pos = 20) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v24_4.png", 
+  plot = l24.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+## Version 3
+
+We randomly added 100 value to `y` as the mean is around 200.
+
+```{r}
+set.seed(194253)
+samp5 <- sample(21, 1)
+f_pol <- round(as.numeric(df %>% filter(gender == "F", attitude == "pol") %>% summarise(mean(y))),1)
+repc.f.pol <- df %>% filter(gender == "F", attitude == "pol")
+repc.f.pol[c(samp5),]$y <- repc.f.pol[c(samp5),]$y+f_pol*0.2
+```
+
+```{r}
+set.seed(107623)
+samp6 <- sample(21, 1)
+m_pol <- round(as.numeric(df %>% filter(gender == "M", attitude == "pol") %>% summarise(mean(y))),1)
+repc.m.pol <- df %>% filter(gender == "M", attitude == "pol")
+repc.m.pol[c(samp6),]$y <- repc.m.pol[c(samp6),]$y+m_pol*0.2
+```
+
+```{r}
+set.seed(274302)
+samp7 <- sample(21, 1)
+m_inf <- round(as.numeric(df %>% filter(gender == "M", attitude == "inf") %>% summarise(mean(y))),1)
+repc.m.inf <- df %>% filter(gender == "M", attitude == "inf")
+repc.m.inf[c(samp7),]$y <- repc.m.inf[c(samp7),]$y+m_inf*0.2
+```
+
+```{r}
+set.seed(981234)
+samp8 <- sample(21, 1)
+f_inf <- round(as.numeric(df %>% filter(gender == "F", attitude == "inf") %>% summarise(mean(y))),1)
+repc.f.inf <- df %>% filter(gender == "F", attitude == "inf")
+repc.f.inf[c(samp8),]$y <- repc.f.inf[c(samp8),]$y+f_inf*0.2
+```
+
+```{r}
+repc3 <- rbind(repc.f.inf, repc.f.pol, repc.m.inf, repc.m.pol)
+v3.lin <- repc3[order(repc3$subject),]
+```
+
+```{r v3.mod}
+v3.lin.mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = v3.lin)
+```
+
+```{r}
+v3.lin.fitted <- lin.extract.fitted.mod(v3.lin.mod, v3.lin)
+v3.lin.lcr <- lin.extract.lcr.mod(v3.lin.mod, v3.lin)
+```
+
+
+```{r}
+ggplot(v3.lin.fitted, aes(index, resm_std, color = subject)) + geom_point() + geom_hline(yintercept = 0)
+
+lin_dp2 <- ggplot(v3.lin.fitted, aes(index, resc_std, color = subject)) + geom_point() + geom_hline(yintercept = 0) + ylab("Standardised conditional residuals") + xlab("Observations index")+ theme()
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/second_presentation/lin_dp2.png", plot = lin_dp2, device = "png", dpi = 300)
+
+lin_dp3 <- ggplot(v3.lin.fitted, aes(sample = resc_std)) + geom_qq() + geom_qq_line(color = "red") + xlab(NULL) + ylab(NULL) + theme()
+
+ggplot(v3.lin.lcr, aes(sample = reslc_lin)) + geom_qq() + geom_qq_line(color = "red")
+```
+
+- The outlying observations are shown in both marginal residual and conditional residuals
+- The conditional residual does not follow a normal distribution while the least confounded residual follows a normal distribution.
+
+## 1st replication
+
+```{r}
+v31.sim <- lin.sim(v3.lin.mod, v3.lin, seed = 1234)
+```
+
+```{r fittednull-v31}
+v31.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v31.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v31}
+v31.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v31.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  
+  .n= i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+##### Detecting outlying observations
+
+```{r v31n-plot21, fig.height=6}
+l31.1 <- lineup(true = v3.lin.fitted, samples = v31.lin.sim.fitted, pos = 15) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v31_1.png", 
+  plot = l31.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v31n-plot4, fig.height=6}
+l31.2 <- lineup(true = v3.lin.fitted, samples = v31.lin.sim.fitted, pos = 15) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v31_2.png", 
+  plot = l31.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+##### Checking normality
+
+```{r v31n-plot6, fig.height=6}
+l31.3 <- lineup(true = v3.lin.fitted, samples = v31.lin.sim.fitted, pos = 11) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v31_3.png", 
+  plot = l31.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v32n-plot6-lcr, fig.height=6}
+l31.4 <- lineup(true = v3.lin.lcr, samples = v31.lin.sim.lcr, pos = 11) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v31_4.png", 
+  plot = l31.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+## 2nd replication
+
+```{r}
+v32.sim <- lin.sim(v3.lin.mod, v3.lin, seed = 4252)
+```
+
+```{r fittednull-v32}
+v32.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v32.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v32}
+v32.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v32.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  
+  .n = i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+##### Detecting outlying observations
+
+```{r v32n-plot21, fig.height=6}
+l32.1 <- lineup(true = v3.lin.fitted, samples = v32.lin.sim.fitted, pos = 15) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v32_1.png", 
+  plot = l32.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v32n-plot4, fig.height=6}
+l32.2 <- lineup(true = v3.lin.fitted, samples = v32.lin.sim.fitted, pos = 15) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v32_2.png", 
+  plot = l32.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+##### Checking normality
+
+```{r v31n-plot6, fig.height=6}
+l32.3 <- lineup(true = v3.lin.fitted, samples = v32.lin.sim.fitted, pos = 11) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v32_3.png", 
+  plot = l32.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v32n-plot6-lcr, fig.height=6}
+l32.4 <- lineup(true = v3.lin.lcr, samples = v32.lin.sim.lcr, pos = 11) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v32_4.png", 
+  plot = l32.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+## 3rd replication
+
+```{r}
+v33.sim <- lin.sim(v3.lin.mod, v3.lin, seed = 9263)
+```
+
+```{r fittednull-v32}
+v33.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v33.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v32}
+v33.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v33.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  .n = i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+##### Detecting outlying observations
+
+```{r v33n-plot21, fig.height=6}
+l33.1 <- lineup(true = v3.lin.fitted, samples = v33.lin.sim.fitted, pos = 2) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v33_1.png", 
+  plot = l33.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v32n-plot4, fig.height=6}
+l33.2 <- lineup(true = v3.lin.fitted, samples = v33.lin.sim.fitted, pos = 2) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v33_2.png", 
+  plot = l33.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+##### Checking normality
+
+```{r v31n-plot6, fig.height=6}
+l33.3 <- lineup(true = v3.lin.fitted, samples = v33.lin.sim.fitted, pos = 6) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v33_3.png", 
+  plot = l33.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v32n-plot6-lcr, fig.height=6}
+l33.4 <- lineup(true = v3.lin.lcr, samples = v33.lin.sim.lcr, pos = 6) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v33_4.png", 
+  plot = l33.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+## 4th replication
+
+```{r}
+v34.sim <- lin.sim(v3.lin.mod, v3.lin, seed = 1508)
+```
+
+```{r fittednull-v34}
+v34.lin.sim.fitted <- purrr::map_dfr(1:19, function(i){
+  df <- v34.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v32}
+v34.lin.sim.lcr <- purrr::map_dfr(1:19, function(i){
+  df <- v34.sim %>% filter(.n == i)
+  m <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  subjects <- unique(df$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(df$scenario)
+  nscenario <- length(scenarios)
+
+  y <- df$y
+  X <- model.matrix(~attitude + gender, data = df)
+  beta <- fixef(m)
+  Z1 <- model.matrix(~scenario - 1, data = df)
+  Z2 <- model.matrix(~subject - 1, data = df)
+  Z <- cbind(Z1, Z2)
+  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N,1:N] %*% t(lt)
+
+  reslc_lin <- (lt %*% resc[1:N] )/sqrt(diag(var.resmcp))
+  .n = i
+
+  tibble::tibble(.n, reslc_lin)
+})
+```
+
+#### Lineups
+
+##### Detecting outlying observations
+
+```{r v32n-plot21, fig.height=6}
+l34.1 <- lineup(true = v3.lin.fitted, samples = v34.lin.sim.fitted, pos = 2) %>% 
+  ggplot(aes(index, resm_std, color = subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v34_1.png", 
+  plot = l34.1, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v32n-plot4, fig.height=6}
+l34.2 <- lineup(true = v3.lin.fitted, samples = v34.lin.sim.fitted, pos = 2) %>% 
+  ggplot(aes(index, resc_std, color = subject)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol=5) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v34_2.png", 
+  plot = l34.2, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+##### Checking normality
+
+```{r v31n-plot6, fig.height=6}
+l34.3 <- lineup(true = v3.lin.fitted, samples = v34.lin.sim.fitted, pos = 6) %>% 
+  ggplot(aes(sample = resc_std)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v34_3.png", 
+  plot = l34.3, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+
+```{r v32n-plot6-lcr, fig.height=6}
+l34.4 <- lineup(true = v3.lin.lcr, samples = v34.lin.sim.lcr, pos = 6) %>% 
+  ggplot(aes(sample = reslc_lin)) + 
+  geom_qq() + geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol=5) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
+        legend.position="none", aspect.ratio = 1)
+
+ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/lin_v34_4.png", 
+  plot = l34.4, device = "png", dpi = 300,
+  height = 12, width = 12)
+```
+```
+
