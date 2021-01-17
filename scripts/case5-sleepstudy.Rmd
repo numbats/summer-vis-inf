@@ -14,6 +14,7 @@ library(dplyr)
 library(tidyverse)
 library(plyr)
 library(nullabor)
+library(MASS)
 ```
 
 ```{r}
@@ -384,7 +385,7 @@ s11.1 <- lineup(true = v1.sl.fitted, samples = v11.sl.sim.fitted, pos = 7) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v11_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v11_1.png", 
   plot = s11.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -400,7 +401,7 @@ s11.2 <- lineup(true = v1.sl.fitted, samples = v11.sl.sim.fitted, pos = 7) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v11_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v11_2.png", 
   plot = s11.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -415,7 +416,7 @@ s11.3 <- lineup(true = v1.sl.fitted, samples = v11.sl.sim.fitted, pos = 9) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v11_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v11_3.png", 
   plot = s11.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -430,7 +431,7 @@ s11.4 <- lineup(true = v1.sl.lcr, samples = v11.sl.simlcr, pos = 9) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v11_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v11_4.png", 
   plot = s11.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -553,7 +554,7 @@ s12.1 <- lineup(true = v1.sl.fitted, samples = v12.sl.sim.fitted, pos = 7) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v12_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v12_1.png", 
   plot = s12.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -569,7 +570,7 @@ s12.2 <- lineup(true = v1.sl.fitted, samples = v12.sl.sim.fitted, pos = 7) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v12_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v12_2.png", 
   plot = s12.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -583,7 +584,7 @@ s12.3 <- lineup(true = v1.sl.fitted, samples = v12.sl.sim.fitted, pos = 9) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v12_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v12_3.png", 
   plot = s12.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -597,7 +598,7 @@ s12.4 <- lineup(true = v1.sl.lcr, samples = v12.sl.simlcr, pos = 9) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v12_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v12_4.png", 
   plot = s12.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -718,7 +719,7 @@ s13.1 <- lineup(true = v1.sl.fitted, samples = v13.sl.sim.fitted, pos = 13) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v13_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v13_1.png", 
   plot = s13.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -732,7 +733,7 @@ s13.2 <- lineup(true = v1.sl.fitted, samples = v13.sl.sim.fitted, pos = 13) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v13_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v13_2.png", 
   plot = s13.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -746,7 +747,7 @@ s13.3 <- lineup(true = v1.sl.fitted, samples = v13.sl.sim.fitted, pos = 4) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v13_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v13_3.png", 
   plot = s13.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -761,7 +762,7 @@ s13.4 <- lineup(true = v1.sl.lcr, samples = v13.sl.simlcr, pos = 4) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v13_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v13_4.png", 
   plot = s13.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -882,7 +883,7 @@ s14.1 <- lineup(true = v1.sl.fitted, samples = v14.sl.sim.fitted, pos = 13) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v14_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v14_1.png", 
   plot = s14.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -897,7 +898,7 @@ s14.2 <- lineup(true = v1.sl.fitted, samples = v14.sl.sim.fitted, pos = 13) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v14_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v14_2.png", 
   plot = s14.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -911,7 +912,7 @@ s14.3 <- lineup(true = v1.sl.fitted, samples = v14.sl.sim.fitted, pos = 4) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v14_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v14_3.png", 
   plot = s14.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -926,7 +927,7 @@ s14.4 <- lineup(true = v1.sl.lcr, samples = v14.sl.simlcr, pos = 4) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v14_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v14_4.png", 
   plot = s14.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1120,7 +1121,7 @@ s21.1 <- lineup(true = v2.sl.fitted, samples = v21.sl.sim.fitted, pos = 5) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v21_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_1.png", 
   plot = s21.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1135,7 +1136,7 @@ s21.2 <- lineup(true = v2.sl.fitted, samples = v21.sl.sim.fitted, pos = 5) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v21_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_2.png", 
   plot = s21.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1149,7 +1150,7 @@ s21.3 <- lineup(true = v2.sl.fitted, samples = v21.sl.sim.fitted, pos = 8) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v21_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_3.png", 
   plot = s21.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1163,7 +1164,7 @@ s21.4 <- lineup(true = v2.sl.lcr, samples = v21.sl.simlcr, pos = 8) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v21_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_4.png", 
   plot = s21.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1283,7 +1284,7 @@ s22.1 <- lineup(true = v2.sl.fitted, samples = v22.sl.sim.fitted, pos = 5) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v22_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v22_1.png", 
   plot = s22.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1297,7 +1298,7 @@ s22.2 <- lineup(true = v2.sl.fitted, samples = v22.sl.sim.fitted, pos = 5) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v22_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v22_2.png", 
   plot = s22.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1311,7 +1312,7 @@ s22.3 <- lineup(true = v2.sl.fitted, samples = v22.sl.sim.fitted, pos = 8) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v22_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v22_3.png", 
   plot = s22.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1324,7 +1325,7 @@ s22.4 <- lineup(true = v2.sl.lcr, samples = v22.sl.simlcr, pos = 8) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v22_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v22_4.png", 
   plot = s22.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1445,7 +1446,7 @@ s23.1 <- lineup(true = v2.sl.fitted, samples = v23.sl.sim.fitted, pos = 15) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v23_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v23_1.png", 
   plot = s23.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1459,7 +1460,7 @@ s23.2 <- lineup(true = v2.sl.fitted, samples = v23.sl.sim.fitted, pos = 15) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v23_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v23_2.png", 
   plot = s23.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1472,7 +1473,7 @@ s23.3 <- lineup(true = v2.sl.fitted, samples = v23.sl.sim.fitted, pos = 20) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v23_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v23_3.png", 
   plot = s23.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1486,7 +1487,7 @@ s23.4 <- lineup(true = v2.sl.lcr, samples = v23.sl.simlcr, pos = 20) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v23_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v23_4.png", 
   plot = s23.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1606,7 +1607,7 @@ s24.1 <- lineup(true = v2.sl.fitted, samples = v24.sl.sim.fitted, pos = 15) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v24_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v24_1.png", 
   plot = s24.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1620,7 +1621,7 @@ s24.2 <- lineup(true = v2.sl.fitted, samples = v24.sl.sim.fitted, pos = 15) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v24_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v24_2.png", 
   plot = s24.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1634,7 +1635,7 @@ s24.3 <- lineup(true = v2.sl.fitted, samples = v24.sl.sim.fitted, pos = 20) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v24_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v24_3.png", 
   plot = s24.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1649,7 +1650,7 @@ s24.4 <- lineup(true = v2.sl.lcr, samples = v24.sl.simlcr, pos = 20) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v24_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v24_4.png", 
   plot = s24.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1682,7 +1683,7 @@ v3.sl.lcr <- sl.extract.lcr(v3.sl.mod, v3.sl)
 ggplot(v3.sl.fitted, aes(index, resm_std, color = Subject)) + geom_point() + geom_hline(yintercept = 0) + geom_text(data = v3.sl.fitted %>% filter(resm_std>3), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2)
 slp_dp2 <- ggplot(v3.sl.fitted, aes(index, resc_std, color = Subject)) + geom_point() + geom_hline(yintercept = 0) + geom_text(data = v3.sl.fitted %>% filter(abs(resc_std)>3), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2) + ylab("Standardised conditional residuals") + theme()
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/second_presentation/slp_dp2.png", plot = slp_dp2, device = "png", dpi = 300)
+ggsave(path= here::here("figures/second/"),filename = "slp_dp2.png", plot = slp_dp2, device = "png", dpi = 300)
 
 ggplot(v3.sl.fitted, aes(sample = resc_std)) + geom_qq() + geom_qq_line(color = "red")
 ggplot(v3.sl.lcr, aes(sample = resmcp)) + geom_qq() + geom_qq_line(color = "red")
@@ -1809,7 +1810,7 @@ s31.1 <- lineup(true = v3.sl.fitted, samples = v31.sl.sim.fitted, pos = 15) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v31_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v31_1.png", 
   plot = s31.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1823,7 +1824,7 @@ s31.2 <- lineup(true = v3.sl.fitted, samples = v31.sl.sim.fitted, pos = 15) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v31_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v31_2.png", 
   plot = s31.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1837,7 +1838,7 @@ s31.3 <- lineup(true = v3.sl.fitted, samples = v31.sl.sim.fitted, pos = 11) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v31_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v31_3.png", 
   plot = s31.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1851,7 +1852,7 @@ s31.4 <- lineup(true = v3.sl.lcr, samples = v31.sl.simlcr, pos = 11) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v31_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v31_4.png", 
   plot = s31.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1973,7 +1974,7 @@ s32.1 <- lineup(true = v3.sl.fitted, samples = v32.sl.sim.fitted, pos = 15) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v32_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v32_1.png", 
   plot = s32.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -1987,7 +1988,7 @@ s32.2 <- lineup(true = v3.sl.fitted, samples = v32.sl.sim.fitted, pos = 15) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v32_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v32_2.png", 
   plot = s32.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -2002,7 +2003,7 @@ s32.3 <- lineup(true = v3.sl.fitted, samples = v32.sl.sim.fitted, pos = 11) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v32_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v32_3.png", 
   plot = s32.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -2017,7 +2018,7 @@ s32.4 <- lineup(true = v3.sl.lcr, samples = v32.sl.simlcr, pos = 11) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v32_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v32_4.png", 
   plot = s32.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -2140,7 +2141,7 @@ s33.1 <- lineup(true = v3.sl.fitted, samples = v33.sl.sim.fitted, pos = 2) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v33_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v33_1.png", 
   plot = s33.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -2155,7 +2156,7 @@ s33.2 <- lineup(true = v3.sl.fitted, samples = v33.sl.sim.fitted, pos = 2) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v33_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v33_2.png", 
   plot = s33.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -2171,7 +2172,7 @@ s33.3 <- lineup(true = v3.sl.fitted, samples = v33.sl.sim.fitted, pos = 6) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v33_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v33_3.png", 
   plot = s33.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -2187,7 +2188,7 @@ s33.4 <- lineup(true = v3.sl.lcr, samples = v33.sl.simlcr, pos = 6) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v33_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v33_4.png", 
   plot = s33.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -2310,7 +2311,7 @@ s34.1 <- lineup(true = v3.sl.fitted, samples = v34.sl.sim.fitted, pos = 2) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v34_1.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v34_1.png", 
   plot = s34.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -2325,7 +2326,7 @@ s34.2 <- lineup(true = v3.sl.fitted, samples = v34.sl.sim.fitted, pos = 2) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none")
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v34_2.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v34_2.png", 
   plot = s34.2, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -2340,7 +2341,7 @@ s34.3 <- lineup(true = v3.sl.fitted, samples = v34.sl.sim.fitted, pos = 6) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v34_3.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v34_3.png", 
   plot = s34.3, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
@@ -2355,7 +2356,7 @@ s34.4 <- lineup(true = v3.sl.lcr, samples = v34.sl.simlcr, pos = 6) %>%
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
         legend.position="none", aspect.ratio = 1)
 
-ggsave(filename = "~/Desktop/Masters/Master_Econometrics/S2 2020/ETF5550/master/figures/lineups/slp_v34_4.png", 
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v34_4.png", 
   plot = s34.4, device = "png", dpi = 300,
   height = 12, width = 12)
 ```

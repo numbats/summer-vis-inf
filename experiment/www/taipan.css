@@ -4,11 +4,11 @@
  text-align: center;
 }
 img {
-  
+
  width: 61%;
-    height: 100%; 
+    height: auto;
     object-fit: contain;
-  
+
 }
 
 out_img_overlay {
