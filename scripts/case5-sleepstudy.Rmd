@@ -936,7 +936,7 @@ ggsave(path= here::here("figures/lineup/"),filename = "slp_v14_4.png",
 
 Added the within unit correlation in the error term by value 1, that is for first subject, first 10 observations' error terms are correlated.
 
-Or we sampled the day (from 0 to 9) as the index. We added 50 to the reaction value for each subject on the same day which is sampled from.
+Or we sampled the day (from 0 to 9) as the index. We added 50 to the reaction value for each subject on the same day which is sampled from. 
 
 ```{r}
 N <- nrow(sleepstudy)
@@ -1682,7 +1682,7 @@ v3.sl.lcr <- sl.extract.lcr(v3.sl.mod, v3.sl)
 ```{r}
 ggplot(v3.sl.fitted, aes(index, resm_std, color = Subject)) + geom_point() + geom_hline(yintercept = 0) + geom_text(data = v3.sl.fitted %>% filter(resm_std>3), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2)
 slp_dp2 <- ggplot(v3.sl.fitted, aes(index, resc_std, color = Subject)) + geom_point() + geom_hline(yintercept = 0) + geom_text(data = v3.sl.fitted %>% filter(abs(resc_std)>3), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2) + ylab("Standardised conditional residuals") + theme()
-
+slp_dp2
 ggsave(path= here::here("figures/second/"),filename = "slp_dp2.png", plot = slp_dp2, device = "png", dpi = 300)
 
 ggplot(v3.sl.fitted, aes(sample = resc_std)) + geom_qq() + geom_qq_line(color = "red")
@@ -2170,7 +2170,7 @@ s33.3 <- lineup(true = v3.sl.fitted, samples = v33.sl.sim.fitted, pos = 6) %>%
   xlab(NULL) + ylab(NULL) +
   theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), 
-        legend.position="none", aspect.ratio = 1)
+        legend.position="none", aspect.ratio = 1) 
 
 ggsave(path= here::here("figures/lineup/"),filename = "slp_v33_3.png", 
   plot = s33.3, device = "png", dpi = 300,
@@ -2315,7 +2315,6 @@ ggsave(path= here::here("figures/lineup/"),filename = "slp_v34_1.png",
   plot = s34.1, device = "png", dpi = 300,
   height = 12, width = 12)
 ```
-
 
 ```{r v34n-plo4, fig.height=6}
 s34.2 <- lineup(true = v3.sl.fitted, samples = v34.sl.sim.fitted, pos = 2) %>% 
