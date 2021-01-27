@@ -554,7 +554,7 @@ s21.1 <- lineup(
 
 s21.1
 
-# ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_1.png",   plot = s21.1, device = "png", dpi = 300,  height = 12, width = 12)
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_1.png",   plot = s21.1, device = "png", dpi = 300,  height = 12, width = 12)
 ```
 
 ```{r v21n-plo4, fig.height=6}
@@ -581,7 +581,7 @@ s21.2 <- lineup(
     legend.position = "none"
   )
 s21.2
-# ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_2.png", plot = s21.2, device = "png", dpi = 300,height = 12, width = 12)
+ ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_2.png", plot = s21.2, device = "png", dpi = 300,height = 12, width = 12)
 ```
 
 ```{r v21n-plo6, fig.height=6}
@@ -608,7 +608,7 @@ s21.3 <- lineup(
   )
 s21.3
 
-# ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_3.png",  plot = s21.3, device = "png", dpi = 300,height = 12, width = 12)
+ ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_3.png",  plot = s21.3, device = "png", dpi = 300,height = 12, width = 12)
 ```
 
 ```{r v21n-plo6-lcr, fig.height=6}
@@ -635,7 +635,7 @@ s21.4 <- lineup(
   )
 
 s21.4
-# ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_4.png", plot = s21.4, device = "png", dpi = 300,height = 12, width = 12)
+ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_4.png", plot = s21.4, device = "png", dpi = 300,height = 12, width = 12)
 ```
 
 
