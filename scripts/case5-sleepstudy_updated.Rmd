@@ -17,8 +17,8 @@ library(nullabor)
 library(MASS)
 ```
 
-```{r}
-
+```{r data}
+# Data and its summary
 data("sleepstudy")
 head(sleepstudy)
 skimr::skim(sleepstudy)
@@ -26,38 +26,43 @@ summary(sleepstudy)
 
 ```
 
-```{r}
+```{r graphical-summary}
 
+# Linear Model on each subject's reaction over days
 ggplot(sleepstudy, aes(Days, Reaction)) +
   geom_point() +
   facet_wrap( ~ Subject) +
   geom_smooth(method = "lm", se = FALSE) +
   ylab("Reaction")
 
+# Each subject's reaction 
 ggplot(sleepstudy, aes(Subject, Reaction)) +
   geom_boxplot()
 
 ```
 
-```{r}
+```{r fitted-values}
 
 testrandom <- plyr::ddply(sleepstudy, .(Subject), function(x) {
-  m <- lm(Reaction ~ Days, data = x)
-  data.frame(x, fitted = fitted(m))	
+  m <- lm(Reaction ~ Days, data = x)   
+  data.frame(x, fitted = fitted(m))	   # fitted mean values from Reaction ~ Days linear model added to data frame 
 })
 
+# fitted values plotted against 10 days for each of 18 subjects
+
 ggplot(testrandom, 
-       aes(Days, fitted, group = Subject)) + 
+       aes(Days, fitted, group = Subject)) +  
   geom_line()
 
 ```
 
 Therefore, from the plots, the model needs the random intercept and random slope.
 
-```{r}
+```{r random-intercept}
 
 # random intercept and random slope
 slmod1 <- lmer(Reaction ~ Days + (Days|Subject), data = sleepstudy)
+
 # independent random effects
 slmod2 <- lmer(Reaction ~ Days + (Days -1 |Subject) + 
                  (1|Subject), data = sleepstudy)
@@ -65,13 +70,16 @@ slmod2 <- lmer(Reaction ~ Days + (Days -1 |Subject) +
 #summary(slmod2)
 
 set.seed(987654321)
-sl.mod2.sims  <- simulate(slmod2, nsim = 19)
-sl.mod2.refit <- lapply(sl.mod2.sims, refit, object = slmod2)
-sl.mod2.sim.ranef <- lapply(sl.mod2.refit, function(x) ranef(x)[[1]])
-sl.mod2.sim.ranef <- do.call("rbind", sl.mod2.sim.ranef)
+sl.mod2.sims  <- simulate(slmod2, nsim = 19) # simulate the fitted linear mixed model
+sl.mod2.refit <- lapply(sl.mod2.sims, refit, object = slmod2) # refits the model 
+sl.mod2.sim.ranef <- lapply(sl.mod2.refit, function(x) ranef(x)[[1]]) # extracts the modes of the random effects
+sl.mod2.sim.ranef <- do.call("rbind", sl.mod2.sim.ranef) #binds the 19 different dataframes as one
 sl.mod2.sim.ranef$.n <- rownames(sl.mod2.sim.ranef)
-sl.mod2.sim.ranef$.n <- as.numeric(str_extract(sl.mod2.sim.ranef$.n, "\\d+"))
-true.sl.mod1.ranef <- ranef(slmod1)$Subject
+
+sl.mod2.sim.ranef$.n <- as.numeric(str_extract(sl.mod2.sim.ranef$.n, "\\d+"))#assigns numbers for each of 19 simulations
+true.sl.mod1.ranef <- ranef(slmod1)$Subject # extracts modes of the correlated effects model
+
+#places the true model among the simulated models to see if correlation between the random effets was necessary
 sl_df <- nullabor:::add_true(sl.mod2.sim.ranef, true.sl.mod1.ranef, pos = 9)
 
 
@@ -101,19 +109,23 @@ Since $M_i$ are the same for each case, the plot 7 and 8 are ignored!
 $$\boldsymbol y \sim N(X\beta, Z \Gamma Z^\top + R)$$
 
 ```{r fitfn}
-sl.extract.fitted <- function(mod, data){
+
+sl.extract.fitted <- function(mod, data) {
+  mod <- slmod2
+  data <- sleepstudy
+  
   N <- nrow(data)
   subjects <- unique(data$Subject)
   nsubjects <- length(subjects)
 
   y <- data$y
-  X <- getME(mod, "X")
-  beta <- fixef(mod)
-  Z <- getME(mod, "Z")
-  u <- c(ranef(mod)$Subject[,1], ranef(mod)$Subject[,2])
+  X <- getME(mod, "X") #fixed effects model matrix
+  beta <- fixef(mod) #fixed effects estimate
+  Z <- getME(mod, "Z") #random effects matrix
+  u <- c(ranef(mod)$Subject[,1], ranef(mod)$Subject[,2]) #extracts the modes of the random effects
   q <- length(u)
 
-  vc <- as.data.frame(VarCorr(mod))
+  vc <- as.data.frame(VarCorr(mod)) # covariances and correlations of model
   R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
   G1 <- vc$vcov[vc$grp == 'Subject'] * diag(nsubjects)
   G2 <- vc$vcov[vc$grp == 'Subject.1'] * diag(nsubjects)
@@ -145,6 +157,7 @@ sl.extract.fitted <- function(mod, data){
 
 ```{r lcrfn}
 sl.extract.lcr <- function(mod, data){
+  
   N <- nrow(data)
   subjects <- unique(data$Subject)
   nsubjects <- length(subjects)
