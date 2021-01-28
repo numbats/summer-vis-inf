@@ -251,6 +251,116 @@ sl.fitted <- sl.extract.fitted(slmod2, sleepstudy)
 sl.lcr <- sl.extract.lcr(slmod2, sleepstudy)
 ```
 
+
+```{r}
+std_res <- function(data) {
+
+purrr::map_dfr(1:19, function(i) {
+  df <- data %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+}
+```
+
+```{r}
+lcr_res <- function(data) {
+  
+  purrr::map_dfr(1:19, function(i) {
+  df <- data %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half),
+    symmetric = T,
+    only.values = FALSE
+  )
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+  
+}
+```
+
+
+
 ```{r best-model-graphics}
 
 ggplot(sl.fitted, aes(index,
@@ -425,105 +535,13 @@ v21.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 9876)
 ```{r nullfitted-v21}
 
 # standardized marginal and conditional residual
-v21.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
-  df <- v21.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  tibble::tibble(df, fitted, resm_std, resc_std, index)
-})
+v21.sl.sim.fitted <- std_res(v21.sl.sim)
 ```
 
 ```{r lcrsimnull-v21}
 
 # least confounded conditional residual
-v21.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
-  df <- v21.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  R_half <- expm::sqrtm(R)
-
-  auxqn <- eigen((R_half %*% P %*% R_half),
-    symmetric = T,
-    only.values = FALSE
-  )
-
-  p <- length(beta)
-
-  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
-
-  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
-
-  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
-  .n <- i
-
-  tibble::tibble(.n, resmcp)
-})
+v21.sl.simlcr <- lcr_res(v21.sl.sim)
 ```
 
 #### Lineup plots
@@ -648,109 +666,11 @@ v22.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 8765)
 ```
 
 ```{r nullfitted-v22}
-v22.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
-  df <- v22.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  tibble::tibble(
-    df,
-    fitted,
-    resm_std,
-    resc_std,
-    index
-  )
-})
+v22.sl.sim.fitted <- std_res(v22.sl.sim)
 ```
 
 ```{r lcrsimnull-v22}
-v22.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
-  df <- v22.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  R_half <- expm::sqrtm(R)
-
-  auxqn <- eigen((R_half %*% P %*% R_half),
-    symmetric = T,
-    only.values = FALSE
-  )
-
-  p <- length(beta)
-
-  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
-
-  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
-
-  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
-  .n <- i
-
-  tibble::tibble(.n, resmcp)
-})
+v22.sl.simlcr <- lcr_res(v22.sl.sim)
 ```
 
 #### Lineup plots
@@ -881,103 +801,11 @@ v23.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 4387)
 ```
 
 ```{r nullfitted-v23}
-v23.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
-  df <- v23.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  tibble::tibble(df, fitted, resm_std, resc_std, index)
-})
+v23.sl.sim.fitted <- std_res(v23.sl.sim)
 ```
 
 ```{r lcrsimnull-v23}
-v23.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
-  df <- v23.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  R_half <- expm::sqrtm(R)
-
-  auxqn <- eigen((R_half %*% P %*% R_half),
-    symmetric = T,
-    only.values = FALSE
-  )
-
-  p <- length(beta)
-
-  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
-
-  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
-
-  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
-  .n <- i
-
-  tibble::tibble(.n, resmcp)
-})
+v23.sl.simlcr <- lcr_res(v23.sl.sim)
 ```
 
 ##### Lineup plots
@@ -1111,101 +939,12 @@ v24.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 8696)
 
 ```{r nullfitted-v24}
 
-v24.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
-  df <- v24.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  tibble::tibble(df, fitted, resm_std, resc_std, index)
-})
+v24.sl.sim.fitted <- std_res(v24.sl.sim)
 ```
 
 ```{r lcrsimnull-v24}
 
-v24.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
-  df <- v24.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  R_half <- expm::sqrtm(R)
-
-  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
-
-  p <- length(beta)
-
-  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
-
-  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
-
-  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
-  .n <- i
-
-  tibble::tibble(.n, resmcp)
-})
+v24.sl.simlcr <- lcr_res(v24.sl.sim)
 ```
 
 ##### Lineup plots
@@ -1408,7 +1147,7 @@ slp_dp2_updated <- ggplot(v3.sl.fitted, aes(index,
 ggsave(
   path = here::here("figures/second/"),
   filename = "slp_dp2_updated.png",
-  plot = slp_dp2,
+  plot = slp_dp2_updated,
   device = "png", dpi = 300
 )
 
@@ -1438,104 +1177,14 @@ v31.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 1253)
 
 ```{r nullfitted-v31}
 
-v31.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
-  df <- v31.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+v31.sl.sim.fitted <- std_res(v31.sl.sim)
 
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  tibble::tibble(df, fitted, resm_std, resc_std, index)
-})
 ```
 
 ```{r lcrsimnull-v31}
 
-v31.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
-  df <- v31.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+v31.sl.simlcr <- lcr_res(v31.sl.sim)
 
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  R_half <- expm::sqrtm(R)
-
-  auxqn <- eigen((R_half %*% P %*% R_half),
-    symmetric = T,
-    only.values = FALSE
-  )
-
-  p <- length(beta)
-
-  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
-
-  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
-
-  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
-  .n <- i
-
-  tibble::tibble(.n, resmcp)
-})
 ```
 
 
@@ -1676,100 +1325,11 @@ v32.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 2353)
 ```
 
 ```{r nullfitted-v32}
-v32.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
-  df <- v32.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  tibble::tibble(df, fitted, resm_std, resc_std, index)
-})
+v32.sl.sim.fitted <- std_res(v32.sl.sim)
 ```
 
 ```{r lcrsimnull-v32}
-v32.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
-  df <- v32.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  R_half <- expm::sqrtm(R)
-
-  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
-
-  p <- length(beta)
-
-  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
-
-  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
-
-  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
-  .n <- i
-
-  tibble::tibble(.n, resmcp)
-})
+v32.sl.simlcr <- lcr_res(v32.sl.sim)
 ```
 
 ##### Lineup plots
@@ -1914,104 +1474,12 @@ v33.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 4792)
 
 ```{r nullfitted-v33}
 
-v33.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
-  df <- v33.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  tibble::tibble(df, fitted, resm_std, resc_std, index)
-})
+v33.sl.sim.fitted <- std_res(v33.sl.sim)
 ```
 
 ```{r lcrsimnull-v33}
 
-v33.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
-  df <- v33.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  R_half <- expm::sqrtm(R)
-
-  auxqn <- eigen((R_half %*% P %*% R_half),
-    symmetric = T,
-    only.values = FALSE
-  )
-
-  p <- length(beta)
-
-  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
-
-  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
-
-  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
-  .n <- i
-
-  tibble::tibble(.n, resmcp)
-})
+v33.sl.simlcr <- lcr_res(v33.sl.sim)
 ```
 
 ##### Lineup plots
@@ -2158,101 +1626,12 @@ v34.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 9865)
 ```
 
 ```{r nullfitted-v34}
-v34.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
-  df <- v34.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  tibble::tibble(df, fitted, resm_std, resc_std, index)
-})
+v34.sl.sim.fitted <- std_res(v34.sl.sim)
 ```
 
 ```{r lcrsimnull-v34}
 
-v34.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
-  df <- v34.sl.sim %>% filter(.n == i)
-  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
-
-  N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
-
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
-  Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
-
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2)
-
-  Sigma <- Z %*% G %*% t(Z) + R
-  Sigma_inv <- solve(Sigma)
-
-  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
-
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
-  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
-  R_half <- expm::sqrtm(R)
-
-  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
-
-  p <- length(beta)
-
-  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
-
-  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
-
-  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
-  .n <- i
-
-  tibble::tibble(.n, resmcp)
-})
+v34.sl.simlcr <- lcr_res(v34.sl.sim)
 ```
 
 
