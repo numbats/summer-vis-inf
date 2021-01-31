@@ -43,3 +43,8 @@ This is the repo for a 2020-2021 summer project to conduct a visual inference st
 
 * Read https://style.tidyverse.org/ and follow the style guidelines there to improve the legibility of the code. You might want to use [`styler`](https://github.com/r-lib/styler) for some easy restyling.
 * Documentation of the code
+
+## 2021/01/28:
+
+* Generalize the code. 
+* Remove assigned color for sleep study subjects. 
