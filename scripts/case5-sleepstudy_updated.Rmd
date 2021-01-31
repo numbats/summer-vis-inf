@@ -69,17 +69,17 @@ slmod2 <- lmer(Reaction ~ Days + (Days - 1 | Subject) +
 # summary(slmod2)
 
 set.seed(987654321)
-sl.mod2.sims <- simulate(slmod2, nsim = 19) # simulate the fitted linear mixed model
-sl.mod2.refit <- lapply(sl.mod2.sims, refit, object = slmod2) # refits the model
-sl.mod2.sim.ranef <- lapply(sl.mod2.refit, function(x) ranef(x)[[1]]) # extracts the modes of the random effects
-sl.mod2.sim.ranef <- do.call("rbind", sl.mod2.sim.ranef) # binds the 19 different dataframes as one
-sl.mod2.sim.ranef$.n <- rownames(sl.mod2.sim.ranef)
+sl_mod2_sims <- simulate(slmod2, nsim = 19) # simulate the fitted linear mixed model
+sl_mod2_refit <- lapply(sl_mod2_sims, refit, object = slmod2) # refits the model
+sl_mod2_sim_ranef <- lapply(sl_mod2_refit, function(x) ranef(x)[[1]]) # extracts the modes of the random effects
+sl_mod2_sim_ranef <- do.call("rbind", sl_mod2_sim_ranef) # binds the 19 different dataframes as one
+sl_mod2_sim_ranef$.n <- rownames(sl_mod2_sim_ranef)
 
-sl.mod2.sim.ranef$.n <- as.numeric(str_extract(sl.mod2.sim.ranef$.n, "\\d+")) # assigns numbers for each of 19 simulations
-true.sl.mod1.ranef <- ranef(slmod1)$Subject # extracts modes of the correlated effects model
+sl_mod2_sim_ranef$.n <- as.numeric(str_extract(sl_mod2_sim_ranef$.n, "\\d+")) # assigns numbers for each of 19 simulations
+true_sl_mod1_ranef <- ranef(slmod1)$Subject # extracts modes of the correlated effects model
 
 # places the true model among the simulated models to see if correlation between the random effets was necessary
-sl_df <- nullabor:::add_true(sl.mod2.sim.ranef, true.sl.mod1.ranef, pos = 9)
+sl_df <- nullabor:::add_true(sl_mod2_sim_ranef, true_sl_mod1_ranef, pos = 9)
 
 
 ggplot(
@@ -113,7 +113,7 @@ $$\boldsymbol y \sim N(X\beta, Z \Gamma Z^\top + R)$$
 ```{r fitfn}
 # standardized marginal and confounded residual
 
-sl.extract.fitted <- function(mod, data) {
+sl_extract_fitted <- function(mod, data) {
   N <- nrow(data)
   subjects <- unique(data$Subject)
   nsubjects <- length(subjects)
@@ -169,7 +169,7 @@ sl.extract.fitted <- function(mod, data) {
 
 # least confounded residual
 
-sl.extract.lcr <- function(mod, data) {
+sl_extract_lcr <- function(mod, data) {
   N <- nrow(data)
   subjects <- unique(data$Subject)
   nsubjects <- length(subjects)
@@ -219,9 +219,9 @@ sl.extract.lcr <- function(mod, data) {
 
   lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
 
-  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+  var_resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
 
-  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var_resmcp))
 
   resmcp_sl <- tibble::tibble(resmcp)
 
@@ -231,24 +231,24 @@ sl.extract.lcr <- function(mod, data) {
 
 ```{r simulate}
 # simulation of the models
-sl.sim <- function(mod, data, nsim = 19, seed, std = FALSE) {
-  fit.sim <- simulate(mod, nsim = nsim, seed = seed)
-  fit.refit <- lapply(fit.sim, refit, object = mod)
-  fit.simy <- lapply(fit.refit, function(x) getME(x, "y"))
-  fit.simy.y <- do.call("cbind", fit.simy)
-  fit.simy.y <- reshape2::melt(fit.simy.y)[-1]
-  names(fit.simy.y) <- c(".n", "y")
-  fit.simy.y$.n <- as.numeric(str_extract(fit.simy.y$.n, "\\d+"))
-  fit.simy.y$Subject <- rep(data$Subject, 19)
-  fit.simy.y$Days <- rep(data$Days, 19)
-  return(fit.simy.y)
+sl_sim <- function(mod, data, nsim = 19, seed, std = FALSE) {
+  fit_sim <- simulate(mod, nsim = nsim, seed = seed)
+  fit_refit <- lapply(fit_sim, refit, object = mod)
+  fit_simy <- lapply(fit_refit, function(x) getME(x, "y"))
+  fit_simy_y <- do.call("cbind", fit_simy)
+  fit_simy_y <- reshape2::melt(fit_simy_y)[-1]
+  names(fit_simy_y) <- c(".n", "y")
+  fit_simy_y$.n <- as.numeric(str_extract(fit_simy_y$.n, "\\d+"))
+  fit_simy_y$Subject <- rep(data$Subject, 19)
+  fit_simy_y$Days <- rep(data$Days, 19)
+  return(fit_simy_y)
 }
 ```
 
 ```{r residual-extract}
 colnames(sleepstudy)[1] <- c("y")
-sl.fitted <- sl.extract.fitted(slmod2, sleepstudy)
-sl.lcr <- sl.extract.lcr(slmod2, sleepstudy)
+sl_fitted <- sl_extract_fitted(slmod2, sleepstudy)
+sl_lcr <- sl_extract_lcr(slmod2, sleepstudy)
 ```
 
 
@@ -348,9 +348,9 @@ lcr_res <- function(data) {
 
   lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
 
-  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+  var_resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
 
-  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var_resmcp))
   .n <- i
 
   tibble::tibble(.n, resmcp)
@@ -363,26 +363,26 @@ lcr_res <- function(data) {
 
 ```{r best-model-graphics}
 
-ggplot(sl.fitted, aes(index,
+ggplot(sl_fitted, aes(index,
   resm_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
   geom_text(
-    data = sl.fitted %>% filter(resm_std > 2),
+    data = sl_fitted %>% filter(resm_std > 2),
     aes(label = index),
     nudge_x = 0.35,
     nudge_y = 0.35,
     size = 2
   )
 
-ggplot(sl.fitted, aes(index,
+ggplot(sl_fitted, aes(index,
   resc_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
   geom_text(
-    data = sl.fitted %>% filter(abs(resc_std) > 3),
+    data = sl_fitted %>% filter(abs(resc_std) > 3),
     aes(label = index),
     nudge_x = 0.35,
     nudge_y = 0.35,
@@ -390,11 +390,11 @@ ggplot(sl.fitted, aes(index,
   )
 
 
-ggplot(sl.fitted, aes(sample = resc_std)) +
+ggplot(sl_fitted, aes(sample = resc_std)) +
   geom_qq() +
   geom_qq_line(color = "red")
 
-ggplot(sl.lcr, aes(sample = resmcp)) +
+ggplot(sl_lcr, aes(sample = resmcp)) +
   geom_qq() +
   geom_qq_line(color = "red")
 ```
@@ -433,48 +433,48 @@ b <- mvrnorm(n = 1, mu = rep(0, q), Sigma = G)
 
 y <- as.vector(getME(slmod2, "X") %*% fixef(slmod2) + getME(slmod2, "Z") %*% b + e)
 
-v1.sl <- tibble(sleepstudy[, -1], y)
+v1_sl <- tibble(sleepstudy[, -1], y)
 ```
 
 ```{r v1mod}
-v1.sl.mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = v1.sl)
+v1_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = v1_sl)
 ```
 
 
 ### Data plots from the 'best' model
 
 ```{r v1data}
-v1.sl.fitted <- sl.extract.fitted(v1.sl.mod, v1.sl)
-v1.sl.lcr <- sl.extract.lcr(v1.sl.mod, v1.sl)
+v1_sl_fitted <- sl_extract_fitted(v1_sl_mod, v1_sl)
+v1_sl_lcr <- sl_extract_lcr(v1_sl_mod, v1_sl)
 ```
 
 ```{r}
-ggplot(v1.sl.fitted, aes(index, resm_std)) +
+ggplot(v1_sl_fitted, aes(index, resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   geom_text(
-    data = v1.sl.fitted %>% filter(resm_std > 3),
+    data = v1_sl_fitted %>% filter(resm_std > 3),
     aes(label = index),
     nudge_x = 0.35,
     nudge_y = 0.35,
     size = 2
   )
-ggplot(v1.sl.fitted, aes(index, resc_std)) +
+ggplot(v1_sl_fitted, aes(index, resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   geom_text(
-    data = v1.sl.fitted %>% filter(abs(resc_std) > 3),
+    data = v1_sl_fitted %>% filter(abs(resc_std) > 3),
     aes(label = index),
     nudge_x = 0.35,
     nudge_y = 0.35,
     size = 2
   )
 
-ggplot(v1.sl.fitted, aes(sample = resc_std)) +
+ggplot(v1_sl_fitted, aes(sample = resc_std)) +
   geom_qq() +
   geom_qq_line(color = "red")
 
-ggplot(v1.sl.lcr, aes(sample = resmcp)) +
+ggplot(v1_sl_lcr, aes(sample = resmcp)) +
   geom_qq() +
   geom_qq_line(color = "red")
 ```
@@ -488,25 +488,25 @@ ggplot(v1.sl.lcr, aes(sample = resmcp)) +
 #### Simulation
 
 ```{r}
-v11.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 1234)
+v11_sl_sim <- sl_sim(v1_sl_mod, v1_sl, seed = 1234)
 ```
 
 ```{r nullfitted-v11}
-v11.sl.sim.fitted <- std_res(v11.sl.sim)
+v11_sl_sim_fitted <- std_res(v11_sl_sim)
 
 ```
 
 ```{r lcrsimnull-v11}
 
-v11.sl.simlcr <- lcr_res(v11.sl.sim)
+v11_sl_simlcr <- lcr_res(v11_sl_sim)
 ```
 
 ##### Lineup plots
 
 ```{r v11n-plot2}
-s11.1 <-
-  lineup(true = v1.sl.fitted,
-         samples = v11.sl.sim.fitted,
+s11_1 <-
+  lineup(true = v1_sl_fitted,
+         samples = v11_sl_sim_fitted,
          pos = 7) %>%
   ggplot(aes(index, resm_std)) +
   geom_point() +
@@ -525,7 +525,7 @@ s11.1 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v11_1.png",
-  plot = s11.1,
+  plot = s11_1,
   device = "png",
   dpi = 300,
   height = 12,
@@ -534,9 +534,9 @@ ggsave(
 ```
 
 ```{r v11n-plot4, fig.height=6}
-s11.2 <-
-  lineup(true = v1.sl.fitted,
-         samples = v11.sl.sim.fitted,
+s11_2 <-
+  lineup(true = v1_sl_fitted,
+         samples = v11_sl_sim_fitted,
          pos = 7) %>%
   ggplot(aes(index, resc_std)) +
   geom_point() +
@@ -555,7 +555,7 @@ s11.2 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v11_2.png",
-  plot = s11.2,
+  plot = s11_2,
   device = "png",
   dpi = 300,
   height = 12,
@@ -564,9 +564,9 @@ ggsave(
 ```
 
 ```{r v11n-plot6, fig.height=6}
-s11.3 <-
-  lineup(true = v1.sl.fitted,
-         samples = v11.sl.sim.fitted,
+s11_3 <-
+  lineup(true = v1_sl_fitted,
+         samples = v11_sl_sim_fitted,
          pos = 9) %>%
   ggplot(aes(sample = resc_std)) +
   geom_qq() +
@@ -586,7 +586,7 @@ s11.3 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v11_3.png",
-  plot = s11.3,
+  plot = s11_3,
   device = "png",
   dpi = 300,
   height = 12,
@@ -595,9 +595,9 @@ ggsave(
 ```
 
 ```{r v11n-plot6-lcr, fig.height=6}
-s11.4 <-
-  lineup(true = v1.sl.lcr,
-         samples = v11.sl.simlcr,
+s11_4 <-
+  lineup(true = v1_sl_lcr,
+         samples = v11_sl_simlcr,
          pos = 9) %>%
   ggplot(aes(sample = resmcp)) +
   geom_qq() +
@@ -617,7 +617,7 @@ s11.4 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v11_4.png",
-  plot = s11.4,
+  plot = s11_4,
   device = "png",
   dpi = 300,
   height = 12,
@@ -630,23 +630,23 @@ ggsave(
 ### Simulation
 
 ```{r}
-v12.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 2345)
+v12_sl_sim <- sl_sim(v1_sl_mod, v1_sl, seed = 2345)
 ```
 
 ```{r nullfitted-v12}
-v12.sl.sim.fitted <- std_res(v12.sl.sim)
+v12_sl_sim_fitted <- std_res(v12_sl_sim)
 ```
 
 ```{r lcrsimnull-v12}
-v12.sl.simlcr <- lcr_res(v12.sl.sim)
+v12_sl_simlcr <- lcr_res(v12_sl_sim)
 ```
 
 #### Lineup plots
 
 ```{r v12n-plo2, fig.height=6}
-s12.1 <-
-  lineup(true = v1.sl.fitted,
-         samples = v12.sl.sim.fitted,
+s12_1 <-
+  lineup(true = v1_sl_fitted,
+         samples = v12_sl_sim_fitted,
          pos = 7) %>%
   ggplot(aes(index, resm_std)) +
   geom_point() +
@@ -665,7 +665,7 @@ s12.1 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v12_1.png",
-  plot = s12.1,
+  plot = s12_1,
   device = "png",
   dpi = 300,
   height = 12,
@@ -674,9 +674,9 @@ ggsave(
 ```
 
 ```{r v12n-plo4, fig.height=6}
-s12.2 <-
-  lineup(true = v1.sl.fitted,
-         samples = v12.sl.sim.fitted,
+s12_2 <-
+  lineup(true = v1_sl_fitted,
+         samples = v12_sl_sim_fitted,
          pos = 7) %>%
   ggplot(aes(index, resc_std)) +
   geom_point() +
@@ -695,7 +695,7 @@ s12.2 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v12_2.png",
-  plot = s12.2,
+  plot = s12_2,
   device = "png",
   dpi = 300,
   height = 12,
@@ -704,9 +704,9 @@ ggsave(
 ```
 
 ```{r v12n-plo6}
-s12.3 <-
-  lineup(true = v1.sl.fitted,
-         samples = v12.sl.sim.fitted,
+s12_3 <-
+  lineup(true = v1_sl_fitted,
+         samples = v12_sl_sim_fitted,
          pos = 9) %>%
   ggplot(aes(sample = resc_std)) +
   geom_qq() +
@@ -726,7 +726,7 @@ s12.3 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v12_3.png",
-  plot = s12.3,
+  plot = s12_3,
   device = "png",
   dpi = 300,
   height = 12,
@@ -735,9 +735,9 @@ ggsave(
 ```
 
 ```{r v12n-plo6-lcr, fig.height=6}
-s12.4 <-
-  lineup(true = v1.sl.lcr,
-         samples = v12.sl.simlcr,
+s12_4 <-
+  lineup(true = v1_sl_lcr,
+         samples = v12_sl_simlcr,
          pos = 9) %>%
   ggplot(aes(sample = resmcp)) +
   geom_qq() +
@@ -757,7 +757,7 @@ s12.4 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v12_4.png",
-  plot = s12.4,
+  plot = s12_4,
   device = "png",
   dpi = 300,
   height = 12,
@@ -770,23 +770,23 @@ ggsave(
 ### Simulation
 
 ```{r}
-v13.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 3456)
+v13_sl_sim <- sl_sim(v1_sl_mod, v1_sl, seed = 3456)
 ```
 
 ```{r nullfitted-v13}
-v13.sl.sim.fitted <- std_res(v13.sl.sim)
+v13_sl_sim_fitted <- std_res(v13_sl_sim)
 ```
 
 ```{r lcrsimnull-v13}
-v13.sl.simlcr <- lcr_res(v13.sl.sim)
+v13_sl_simlcr <- lcr_res(v13_sl_sim)
 ```
 
 #### Lineup plots
 
 ```{r v13n-plo2, fig.height=6}
-s13.1 <-
-  lineup(true = v1.sl.fitted,
-         samples = v13.sl.sim.fitted,
+s13_1 <-
+  lineup(true = v1_sl_fitted,
+         samples = v13_sl_sim_fitted,
          pos = 13) %>%
   ggplot(aes(index, resm_std)) +
   geom_point() +
@@ -805,7 +805,7 @@ s13.1 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v13_1.png",
-  plot = s13.1,
+  plot = s13_1,
   device = "png",
   dpi = 300,
   height = 12,
@@ -814,9 +814,9 @@ ggsave(
 ```
 
 ```{r v13n-plo4, fig.height=6}
-s13.2 <-
-  lineup(true = v1.sl.fitted,
-         samples = v13.sl.sim.fitted,
+s13_2 <-
+  lineup(true = v1_sl_fitted,
+         samples = v13_sl_sim_fitted,
          pos = 13) %>%
   ggplot(aes(index, resc_std)) +
   geom_point() +
@@ -835,7 +835,7 @@ s13.2 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v13_2.png",
-  plot = s13.2,
+  plot = s13_2,
   device = "png",
   dpi = 300,
   height = 12,
@@ -844,9 +844,9 @@ ggsave(
 ```
 
 ```{r v13n-plo6, fig.height=6}
-s13.3 <-
-  lineup(true = v1.sl.fitted,
-         samples = v13.sl.sim.fitted,
+s13_3 <-
+  lineup(true = v1_sl_fitted,
+         samples = v13_sl_sim_fitted,
          pos = 4) %>%
   ggplot(aes(sample = resc_std)) +
   geom_qq() +
@@ -866,7 +866,7 @@ s13.3 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v13_3.png",
-  plot = s13.3,
+  plot = s13_3,
   device = "png",
   dpi = 300,
   height = 12,
@@ -876,9 +876,9 @@ ggsave(
 
 
 ```{r v13n-plo6-lcr, fig.height=6}
-s13.4 <-
-  lineup(true = v1.sl.lcr,
-         samples = v13.sl.simlcr,
+s13_4 <-
+  lineup(true = v1_sl_lcr,
+         samples = v13_sl_simlcr,
          pos = 4) %>%
   ggplot(aes(sample = resmcp)) +
   geom_qq() +
@@ -898,7 +898,7 @@ s13.4 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v13_4.png",
-  plot = s13.4,
+  plot = s13_4,
   device = "png",
   dpi = 300,
   height = 12,
@@ -911,23 +911,23 @@ ggsave(
 ### Simulation
 
 ```{r}
-v14.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 9876)
+v14_sl_sim <- sl_sim(v1_sl_mod, v1_sl, seed = 9876)
 ```
 
 ```{r nullfitted-v14}
-v14.sl.sim.fitted <- std_res(v14.sl.sim)
+v14_sl_sim_fitted <- std_res(v14_sl_sim)
 ```
 
 ```{r lcrsimnull-v14}
-v14.sl.simlcr <- lcr_res(v14.sl.sim)
+v14_sl_simlcr <- lcr_res(v14_sl_sim)
 ```
 
 #### Lineup plots
 
 ```{r v14n-plo2, fig.height=6}
-s14.1 <-
-  lineup(true = v1.sl.fitted,
-         samples = v14.sl.sim.fitted,
+s14_1 <-
+  lineup(true = v1_sl_fitted,
+         samples = v14_sl_sim_fitted,
          pos = 13) %>%
   ggplot(aes(index, resm_std)) +
   geom_point() +
@@ -946,7 +946,7 @@ s14.1 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v14_1.png",
-  plot = s14.1,
+  plot = s14_1,
   device = "png",
   dpi = 300,
   height = 12,
@@ -956,9 +956,9 @@ ggsave(
 
 
 ```{r v14n-plo4, fig.height=6}
-s14.2 <-
-  lineup(true = v1.sl.fitted,
-         samples = v14.sl.sim.fitted,
+s14_2 <-
+  lineup(true = v1_sl_fitted,
+         samples = v14_sl_sim_fitted,
          pos = 13) %>%
   ggplot(aes(index, resc_std)) +
   geom_point() +
@@ -977,7 +977,7 @@ s14.2 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v14_2.png",
-  plot = s14.2,
+  plot = s14_2,
   device = "png",
   dpi = 300,
   height = 12,
@@ -986,9 +986,9 @@ ggsave(
 ```
 
 ```{r v14n-plo6, fig.height=6}
-s14.3 <-
-  lineup(true = v1.sl.fitted,
-         samples = v14.sl.sim.fitted,
+s14_3 <-
+  lineup(true = v1_sl_fitted,
+         samples = v14_sl_sim_fitted,
          pos = 4) %>%
   ggplot(aes(sample = resc_std)) +
   geom_qq() +
@@ -1008,7 +1008,7 @@ s14.3 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v14_3.png",
-  plot = s14.3,
+  plot = s14_3,
   device = "png",
   dpi = 300,
   height = 12,
@@ -1018,9 +1018,9 @@ ggsave(
 
 
 ```{r v14n-plo6-lcr, fig.height=6}
-s14.4 <-
-  lineup(true = v1.sl.lcr,
-         samples = v14.sl.simlcr,
+s14_4 <-
+  lineup(true = v1_sl_lcr,
+         samples = v14_sl_simlcr,
          pos = 4) %>%
   ggplot(aes(sample = resmcp)) +
   geom_qq() +
@@ -1040,7 +1040,7 @@ s14.4 <-
 ggsave(
   path = here::here("figures/lineup/sleep_study/version1/"),
   filename = "slp_v14_4.png",
-  plot = s14.4,
+  plot = s14_4,
   device = "png",
   dpi = 300,
   height = 12,
@@ -1074,8 +1074,8 @@ G <- Matrix::bdiag(G1, G2)
 
 
 # correlation in error added
-R[lower.tri(R)] <- 50
-R[upper.tri(R)] <- 50
+R[lower.tri(R)] <- 25
+R[upper.tri(R)] <- 25
 
 R <- kronecker(diag(18), R) # kronecker matrix multiplication
 
@@ -1088,12 +1088,12 @@ y <- as.vector(mvtnorm::rmvnorm(1,
   checkSymmetry = FALSE
 ))
 
-v2.sl <- tibble(
+v2_sl <- tibble(
   y, sleepstudy$Days,
   sleepstudy$Subject
 )
 
-colnames(v2.sl) <- c("y", "Days", "Subject")
+colnames(v2_sl) <- c("y", "Days", "Subject")
 
 # Second option:
 # repc2 <- sleepstudy
@@ -1107,38 +1107,52 @@ colnames(v2.sl) <- c("y", "Days", "Subject")
 # }
 
 # repc2
+
+set.seed(1234)
+# multivariate t error term
+e <- as.vector(rmvt(1, sigma = R, df = 1))
+# normal random effects
+b <- mvrnorm(n = 1, mu = rep(0, q), Sigma = G)
+y <- as.vector(getME(slmod2, "X") %*% fixef(slmod2) + getME(slmod2, "Z") %*% b + e)
+
+v2_lin <- tibble(sleepstudy[, -1], y)
+
+v2_sl_mod_new <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = v2_lin)
+v2_sl_fitted_new <- sl_extract_fitted(v2_sl_mod_new, v2_lin)
+v2_sl_lcr_new <- sl_extract_lcr(v2_sl_mod_new, v2_lin)
+
 ```
 
 ```{r v2-model}
 
-v2.sl.mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = v2.sl)
+v2_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = v2_sl)
 
-v2.sl.fitted <- sl.extract.fitted(v2.sl.mod, v2.sl)
-v2.sl.lcr <- sl.extract.lcr(v2.sl.mod, v2.sl)
+v2_sl_fitted <- sl_extract_fitted(v2_sl_mod, v2_sl)
+v2_sl_lcr <- sl_extract_lcr(v2_sl_mod, v2_sl)
 ```
 
 ### Data plots
 ```{r}
-ggplot(v2.sl.fitted, aes(index,
+ggplot(v2_sl_fitted, aes(index,
   resm_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
   geom_text(
-    data = v2.sl.fitted %>% filter(abs(resm_std) > 3),
+    data = v2_sl_fitted %>% filter(abs(resm_std) > 3),
     aes(label = index),
     nudge_x = 0.35,
     nudge_y = 0.35,
     size = 2
   )
 
-ggplot(v2.sl.fitted, aes(index,
+ggplot(v2_sl_fitted, aes(index,
   resc_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
   geom_text(
-    data = v2.sl.fitted %>% filter(abs(resc_std) > 3),
+    data = v2_sl_fitted %>% filter(abs(resc_std) > 3),
     aes(label = index),
     nudge_x = 0.35,
     nudge_y = 0.35,
@@ -1146,11 +1160,11 @@ ggplot(v2.sl.fitted, aes(index,
   )
 
 
-ggplot(v2.sl.fitted, aes(sample = resc_std)) +
+ggplot(v2_sl_fitted, aes(sample = resc_std)) +
   geom_qq() +
   geom_qq_line(color = "red")
 
-ggplot(v2.sl.lcr, aes(sample = resmcp)) +
+ggplot(v2_sl_lcr, aes(sample = resmcp)) +
   geom_qq() +
   geom_qq_line(color = "red")
 ```
@@ -1166,28 +1180,30 @@ By adding the noise,
 ### Simulation
 
 ```{r}
-v21.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 9876)
+v21_sl_sim <- sl_sim(v2_sl_mod, v2_sl, seed = 9876)
+#v21_sl_sim <- sl_sim(v2_sl_mod, v2_lin, seed = 9876)
+
 ```
 
 ```{r nullfitted-v21}
 
 # standardized marginal and conditional residual
-v21.sl.sim.fitted <- std_res(v21.sl.sim)
+v21_sl_sim_fitted <- std_res(v21_sl_sim)
 ```
 
 ```{r lcrsimnull-v21}
 
 # least confounded conditional residual
-v21.sl.simlcr <- lcr_res(v21.sl.sim)
+v21_sl_simlcr <- lcr_res(v21_sl_sim)
 ```
 
 #### Lineup plots
 
 ```{r v21n-plo2, fig.height=6}
 
-s21.1 <- lineup(
-  true = v2.sl.fitted,
-  samples = v21.sl.sim.fitted,
+s21_1 <- lineup(
+  true = v2_sl_fitted,
+  samples = v21_sl_sim_fitted,
   pos = 5
 ) %>%
   ggplot(aes(index,
@@ -1206,12 +1222,12 @@ s21.1 <- lineup(
     legend.position = "none"
   )
 
-s21.1
+s21_1
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"),
   filename = "slp_v21_1.png",
-  plot = s21.1,
+  plot = s21_1,
   device = "png",
   dpi = 300,
   height = 12,
@@ -1221,9 +1237,9 @@ ggsave(
 
 ```{r v21n-plo4, fig.height=6}
 
-s21.2 <- lineup(
-  true = v2.sl.fitted,
-  samples = v21.sl.sim.fitted,
+s21_2 <- lineup(
+  true = v2_sl_fitted,
+  samples = v21_sl_sim_fitted,
   pos = 5
 ) %>%
   ggplot(aes(index,
@@ -1241,11 +1257,11 @@ s21.2 <- lineup(
     axis.ticks.y = element_blank(),
     legend.position = "none"
   )
-s21.2
+s21_2
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"),
   filename = "slp_v21_2.png",
-  plot = s21.2,
+  plot = s21_2,
   device = "png",
   dpi = 300,
   height = 12,
@@ -1254,9 +1270,9 @@ ggsave(
 ```
 
 ```{r v21n-plo6, fig.height=6}
-s21.3 <- lineup(
-  true = v2.sl.fitted,
-  samples = v21.sl.sim.fitted,
+s21_3 <- lineup(
+  true = v2_sl_fitted,
+  samples = v21_sl_sim_fitted,
   pos = 8
 ) %>%
   ggplot(aes(sample = resc_std)) +
@@ -1275,13 +1291,13 @@ s21.3 <- lineup(
     legend.position = "none",
     aspect.ratio = 1
   )
-s21.3
+s21_3
 
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"),
   filename = "slp_v21_3.png",
-  plot = s21.3,
+  plot = s21_3,
   device = "png",
   dpi = 300,
   height = 12,
@@ -1290,9 +1306,9 @@ ggsave(
 ```
 
 ```{r v21n-plo6-lcr, fig.height=6}
-s21.4 <- lineup(
-  true = v2.sl.lcr,
-  samples = v21.sl.simlcr,
+s21_4 <- lineup(
+  true = v2_sl_lcr,
+  samples = v21_sl_simlcr,
   pos = 8
 ) %>%
   ggplot(aes(sample = resmcp)) +
@@ -1312,11 +1328,11 @@ s21.4 <- lineup(
     aspect.ratio = 1
   )
 
-s21.4
+s21_4
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"),
   filename = "slp_v21_4.png",
-  plot = s21.4,
+  plot = s21_4,
   device = "png",
   dpi = 300,
   height = 12,
@@ -1330,24 +1346,24 @@ ggsave(
 ### Simulation
 
 ```{r}
-v22.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 8765)
+v22_sl_sim <- sl_sim(v2_sl_mod, v2_sl, seed = 8765)
 ```
 
 ```{r nullfitted-v22}
-v22.sl.sim.fitted <- std_res(v22.sl.sim)
+v22_sl_sim_fitted <- std_res(v22_sl_sim)
 ```
 
 ```{r lcrsimnull-v22}
-v22.sl.simlcr <- lcr_res(v22.sl.sim)
+v22_sl_simlcr <- lcr_res(v22_sl_sim)
 ```
 
 #### Lineup plots
 
 ```{r v22n-plo2, fig.height=6}
 
-s22.1 <- lineup(
-  true = v2.sl.fitted,
-  samples = v22.sl.sim.fitted,
+s22_1 <- lineup(
+  true = v2_sl_fitted,
+  samples = v22_sl_sim_fitted,
   pos = 5
 ) %>%
   ggplot(aes(index,
@@ -1368,15 +1384,15 @@ s22.1 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v22_1.png",
-  plot = s22.1, device = "png", dpi = 300,
+  plot = s22_1, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
 
 ```{r v22n-plo4, fig.height=6}
-s22.2 <- lineup(
-  true = v2.sl.fitted,
-  samples = v22.sl.sim.fitted,
+s22_2 <- lineup(
+  true = v2_sl_fitted,
+  samples = v22_sl_sim_fitted,
   pos = 5
 ) %>%
   ggplot(aes(index,
@@ -1397,16 +1413,16 @@ s22.2 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v22_2.png",
-  plot = s22.2, device = "png", dpi = 300,
+  plot = s22_2, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
 
 ```{r v22n-plo6, fig.height=6}
 
-s22.3 <- lineup(
-  true = v2.sl.fitted,
-  samples = v22.sl.sim.fitted,
+s22_3 <- lineup(
+  true = v2_sl_fitted,
+  samples = v22_sl_sim_fitted,
   pos = 8
 ) %>%
   ggplot(aes(sample = resc_std)) +
@@ -1425,16 +1441,16 @@ s22.3 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v22_3.png",
-  plot = s22.3, device = "png", dpi = 300,
+  plot = s22_3, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
 
 ```{r v22n-plo6-lcr, fig.height=6}
 
-s22.4 <- lineup(
-  true = v2.sl.lcr,
-  samples = v22.sl.simlcr,
+s22_4 <- lineup(
+  true = v2_sl_lcr,
+  samples = v22_sl_simlcr,
   pos = 8
 ) %>%
   ggplot(aes(sample = resmcp)) +
@@ -1453,7 +1469,7 @@ s22.4 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v22_4.png",
-  plot = s22.4, device = "png", dpi = 300,
+  plot = s22_4, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
@@ -1463,24 +1479,24 @@ ggsave(
 #### Simulation
 
 ```{r}
-v23.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 4387)
+v23_sl_sim <- sl_sim(v2_sl_mod, v2_sl, seed = 4387)
 ```
 
 ```{r nullfitted-v23}
-v23.sl.sim.fitted <- std_res(v23.sl.sim)
+v23_sl_sim_fitted <- std_res(v23_sl_sim)
 ```
 
 ```{r lcrsimnull-v23}
-v23.sl.simlcr <- lcr_res(v23.sl.sim)
+v23_sl_simlcr <- lcr_res(v23_sl_sim)
 ```
 
 ##### Lineup plots
 
 ```{r v23n-plo2, fig.height=6}
 
-s23.1 <- lineup(
-  true = v2.sl.fitted,
-  samples = v23.sl.sim.fitted,
+s23_1 <- lineup(
+  true = v2_sl_fitted,
+  samples = v23_sl_sim_fitted,
   pos = 15
 ) %>%
   ggplot(aes(index,
@@ -1501,16 +1517,16 @@ s23.1 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v23_1.png",
-  plot = s23.1, device = "png", dpi = 300,
+  plot = s23_1, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
 
 ```{r v23n-plo4, fig.height=6}
 
-s23.2 <- lineup(
-  true = v2.sl.fitted,
-  samples = v23.sl.sim.fitted,
+s23_2 <- lineup(
+  true = v2_sl_fitted,
+  samples = v23_sl_sim_fitted,
   pos = 15
 ) %>%
   ggplot(aes(index,
@@ -1530,16 +1546,16 @@ s23.2 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v23_2.png",
-  plot = s23.2, device = "png", dpi = 300,
+  plot = s23_2, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
 
 ```{r v23n-plo6, fig.height=6}
 
-s23.3 <- lineup(
-  true = v2.sl.fitted,
-  samples = v23.sl.sim.fitted,
+s23_3 <- lineup(
+  true = v2_sl_fitted,
+  samples = v23_sl_sim_fitted,
   pos = 20
 ) %>%
   ggplot(aes(sample = resc_std)) +
@@ -1559,16 +1575,16 @@ s23.3 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v23_3.png",
-  plot = s23.3, device = "png", dpi = 300,
+  plot = s23_3, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
 
 ```{r v23n-plo6-lcr, fig.height=6}
 
-s23.4 <- lineup(
-  true = v2.sl.lcr,
-  samples = v23.sl.simlcr,
+s23_4 <- lineup(
+  true = v2_sl_lcr,
+  samples = v23_sl_simlcr,
   pos = 20
 ) %>%
   ggplot(aes(sample = resmcp)) +
@@ -1588,7 +1604,7 @@ s23.4 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v23_4.png",
-  plot = s23.4, device = "png", dpi = 300,
+  plot = s23_4, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
@@ -1598,26 +1614,26 @@ ggsave(
 #### Simulation
 
 ```{r}
-v24.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 8696)
+v24_sl_sim <- sl_sim(v2_sl_mod, v2_sl, seed = 8696)
 ```
 
 ```{r nullfitted-v24}
 
-v24.sl.sim.fitted <- std_res(v24.sl.sim)
+v24_sl_sim_fitted <- std_res(v24_sl_sim)
 ```
 
 ```{r lcrsimnull-v24}
 
-v24.sl.simlcr <- lcr_res(v24.sl.sim)
+v24_sl_simlcr <- lcr_res(v24_sl_sim)
 ```
 
 ##### Lineup plots
 
 ```{r v24n-plo2, fig.height=6}
 
-s24.1 <- lineup(
-  true = v2.sl.fitted,
-  samples = v24.sl.sim.fitted,
+s24_1 <- lineup(
+  true = v2_sl_fitted,
+  samples = v24_sl_sim_fitted,
   pos = 15
 ) %>%
   ggplot(aes(index,
@@ -1636,16 +1652,16 @@ s24.1 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v24_1.png",
-  plot = s24.1, device = "png", dpi = 300,
+  plot = s24_1, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
 
 ```{r v24n-plo4, fig.height=6}
 
-s24.2 <- lineup(
-  true = v2.sl.fitted,
-  samples = v24.sl.sim.fitted,
+s24_2 <- lineup(
+  true = v2_sl_fitted,
+  samples = v24_sl_sim_fitted,
   pos = 15
 ) %>%
   ggplot(aes(index,
@@ -1665,16 +1681,16 @@ s24.2 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v24_2.png",
-  plot = s24.2, device = "png", dpi = 300,
+  plot = s24_2, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
 
 ```{r v24n-plo6, fig.height=6}
 
-s24.3 <- lineup(
-  true = v2.sl.fitted,
-  samples = v24.sl.sim.fitted,
+s24_3 <- lineup(
+  true = v2_sl_fitted,
+  samples = v24_sl_sim_fitted,
   pos = 20
 ) %>%
   ggplot(aes(sample = resc_std)) +
@@ -1694,7 +1710,7 @@ s24.3 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v24_3.png",
-  plot = s24.3, device = "png", dpi = 300,
+  plot = s24_3, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
@@ -1702,9 +1718,9 @@ ggsave(
 
 ```{r v24n-plo6-lcr, fig.height=6}
 
-s24.4 <- lineup(
-  true = v2.sl.lcr,
-  samples = v24.sl.simlcr,
+s24_4 <- lineup(
+  true = v2_sl_lcr,
+  samples = v24_sl_simlcr,
   pos = 20
 ) %>%
   ggplot(aes(sample = resmcp)) +
@@ -1724,7 +1740,7 @@ s24.4 <- lineup(
 
 ggsave(
   path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v24_4.png",
-  plot = s24.4, device = "png", dpi = 300,
+  plot = s24_4, device = "png", dpi = 300,
   height = 12, width = 12
 )
 ```
@@ -1758,27 +1774,27 @@ d <- rbind(
   rest_df
 )
 
-v3.sl <- d %>% arrange(Subject, Days)
+v3_sl <- d %>% arrange(Subject, Days)
 ```
 
 ```{r}
-v3.sl.mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = v3.sl)
+v3_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = v3_sl)
 
-v3.sl.fitted <- sl.extract.fitted(v3.sl.mod, v3.sl)
-v3.sl.lcr <- sl.extract.lcr(v3.sl.mod, v3.sl)
+v3_sl_fitted <- sl_extract_fitted(v3_sl_mod, v3_sl)
+v3_sl_lcr <- sl_extract_lcr(v3_sl_mod, v3_sl)
 ```
 
 #### Data plots
 
 ```{r}
 
-ggplot(v3.sl.fitted, aes(index,
+ggplot(v3_sl_fitted, aes(index,
   resm_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
   geom_text(
-    data = v3.sl.fitted %>%
+    data = v3_sl_fitted %>%
       filter(resm_std > 3),
     aes(label = index),
     nudge_x = 0.35,
@@ -1786,13 +1802,13 @@ ggplot(v3.sl.fitted, aes(index,
     size = 2
   )
 
-slp_dp2_updated <- ggplot(v3.sl.fitted, aes(index,
+slp_dp2_updated <- ggplot(v3_sl_fitted, aes(index,
   resc_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
   geom_text(
-    data = v3.sl.fitted %>%
+    data = v3_sl_fitted %>%
       filter(abs(resc_std) > 3),
     aes(label = index),
     nudge_x = 0.35,
@@ -1812,13 +1828,13 @@ ggsave(
 )
 
 ggplot(
-  v3.sl.fitted,
+  v3_sl_fitted,
   aes(sample = resc_std)
 ) +
   geom_qq() +
   geom_qq_line(color = "red")
 
-ggplot(v3.sl.lcr, aes(sample = resmcp)) +
+ggplot(v3_sl_lcr, aes(sample = resmcp)) +
   geom_qq() +
   geom_qq_line(color = "red")
 ```
@@ -1832,18 +1848,18 @@ ggplot(v3.sl.lcr, aes(sample = resmcp)) +
 
 #### Simulation
 ```{r}
-v31.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 1253)
+v31_sl_sim <- sl_sim(v3_sl_mod, v3_sl, seed = 1253)
 ```
 
 ```{r nullfitted-v31}
 
-v31.sl.sim.fitted <- std_res(v31.sl.sim)
+v31_sl_sim_fitted <- std_res(v31_sl_sim)
 
 ```
 
 ```{r lcrsimnull-v31}
 
-v31.sl.simlcr <- lcr_res(v31.sl.sim)
+v31_sl_simlcr <- lcr_res(v31_sl_sim)
 
 ```
 
@@ -1852,9 +1868,9 @@ v31.sl.simlcr <- lcr_res(v31.sl.sim)
 
 ```{r v31n-plo2, fig.height=6}
 
-s31.1 <- lineup(
-  true = v3.sl.fitted,
-  samples = v31.sl.sim.fitted,
+s31_1 <- lineup(
+  true = v3_sl_fitted,
+  samples = v31_sl_sim_fitted,
   pos = 15
 ) %>%
   ggplot(aes(index,
@@ -1875,7 +1891,7 @@ s31.1 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v31_1_updated.png",
-  plot = s31.1, device = "png",
+  plot = s31_1, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
@@ -1883,9 +1899,9 @@ ggsave(
 
 ```{r v31n-plo4, fig.height=6}
 
-s31.2 <- lineup(
-  true = v3.sl.fitted,
-  samples = v31.sl.sim.fitted,
+s31_2 <- lineup(
+  true = v3_sl_fitted,
+  samples = v31_sl_sim_fitted,
   pos = 15
 ) %>%
   ggplot(aes(index,
@@ -1906,7 +1922,7 @@ s31.2 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v31_2_updated.png",
-  plot = s31.2, device = "png",
+  plot = s31_2, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
@@ -1914,9 +1930,9 @@ ggsave(
 
 ```{r v31n-plo6, fig.height=6}
 
-s31.3 <- lineup(
-  true = v3.sl.fitted,
-  samples = v31.sl.sim.fitted,
+s31_3 <- lineup(
+  true = v3_sl_fitted,
+  samples = v31_sl_sim_fitted,
   pos = 11
 ) %>%
   ggplot(aes(sample = resc_std)) +
@@ -1936,7 +1952,7 @@ s31.3 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v31_3_updated.png",
-  plot = s31.3, device = "png",
+  plot = s31_3, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
@@ -1944,9 +1960,9 @@ ggsave(
 
 ```{r v31n-plo6-lcr, fig.height=6}
 
-s31.4 <- lineup(
-  true = v3.sl.lcr,
-  samples = v31.sl.simlcr,
+s31_4 <- lineup(
+  true = v3_sl_lcr,
+  samples = v31_sl_simlcr,
   pos = 11
 ) %>%
   ggplot(aes(sample = resmcp)) +
@@ -1967,7 +1983,7 @@ s31.4 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v31_4_updated.png",
-  plot = s31.4, device = "png",
+  plot = s31_4, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
@@ -1979,24 +1995,24 @@ ggsave(
 #### Simulation
 
 ```{r}
-v32.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 2353)
+v32_sl_sim <- sl_sim(v3_sl_mod, v3_sl, seed = 2353)
 ```
 
 ```{r nullfitted-v32}
-v32.sl.sim.fitted <- std_res(v32.sl.sim)
+v32_sl_sim_fitted <- std_res(v32_sl_sim)
 ```
 
 ```{r lcrsimnull-v32}
-v32.sl.simlcr <- lcr_res(v32.sl.sim)
+v32_sl_simlcr <- lcr_res(v32_sl_sim)
 ```
 
 ##### Lineup plots
 
 ```{r v32n-plo2, fig.height=6}
 
-s32.1 <- lineup(
-  true = v3.sl.fitted,
-  samples = v32.sl.sim.fitted,
+s32_1 <- lineup(
+  true = v3_sl_fitted,
+  samples = v32_sl_sim_fitted,
   pos = 15
 ) %>%
   ggplot(aes(index,
@@ -2018,7 +2034,7 @@ s32.1 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v32_1_updated.png",
-  plot = s32.1, device = "png",
+  plot = s32_1, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
@@ -2026,9 +2042,9 @@ ggsave(
 
 ```{r v32n-plo4, fig.height=6}
 
-s32.2 <- lineup(
-  true = v3.sl.fitted,
-  samples = v32.sl.sim.fitted,
+s32_2 <- lineup(
+  true = v3_sl_fitted,
+  samples = v32_sl_sim_fitted,
   pos = 15
 ) %>%
   ggplot(aes(index,
@@ -2050,7 +2066,7 @@ s32.2 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v32_2_updated.png",
-  plot = s32.2,
+  plot = s32_2,
   device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -2059,9 +2075,9 @@ ggsave(
 
 ```{r v32n-plo6, fig.height=6}
 
-s32.3 <- lineup(
-  true = v3.sl.fitted,
-  samples = v32.sl.sim.fitted,
+s32_3 <- lineup(
+  true = v3_sl_fitted,
+  samples = v32_sl_sim_fitted,
   pos = 11
 ) %>%
   ggplot(aes(sample = resc_std)) +
@@ -2082,7 +2098,7 @@ s32.3 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v32_3_updated.png",
-  plot = s32.3,
+  plot = s32_3,
   device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -2091,9 +2107,9 @@ ggsave(
 
 ```{r v32n-plo6-lcr, fig.height=6}
 
-s32.4 <- lineup(
-  true = v3.sl.lcr,
-  samples = v32.sl.simlcr,
+s32_4 <- lineup(
+  true = v3_sl_lcr,
+  samples = v32_sl_simlcr,
   pos = 11
 ) %>%
   ggplot(aes(sample = resmcp)) +
@@ -2114,7 +2130,7 @@ s32.4 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v32_4_updated.png",
-  plot = s32.4, device = "png",
+  plot = s32_4, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
@@ -2125,26 +2141,26 @@ ggsave(
 #### Simulation
 
 ```{r}
-v33.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 4792)
+v33_sl_sim <- sl_sim(v3_sl_mod, v3_sl, seed = 4792)
 ```
 
 ```{r nullfitted-v33}
 
-v33.sl.sim.fitted <- std_res(v33.sl.sim)
+v33_sl_sim_fitted <- std_res(v33_sl_sim)
 ```
 
 ```{r lcrsimnull-v33}
 
-v33.sl.simlcr <- lcr_res(v33.sl.sim)
+v33_sl_simlcr <- lcr_res(v33_sl_sim)
 ```
 
 ##### Lineup plots
 
 ```{r v33n-plo2, fig.height=6}
 
-s33.1 <- lineup(
-  true = v3.sl.fitted,
-  samples = v33.sl.sim.fitted,
+s33_1 <- lineup(
+  true = v3_sl_fitted,
+  samples = v33_sl_sim_fitted,
   pos = 2
 ) %>%
   ggplot(aes(index,
@@ -2166,7 +2182,7 @@ s33.1 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v33_1_updated.png",
-  plot = s33.1, device = "png",
+  plot = s33_1, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
@@ -2175,9 +2191,9 @@ ggsave(
 
 ```{r v33n-plo4, fig.height=6}
 
-s33.2 <- lineup(
-  true = v3.sl.fitted,
-  samples = v33.sl.sim.fitted,
+s33_2 <- lineup(
+  true = v3_sl_fitted,
+  samples = v33_sl_sim_fitted,
   pos = 2
 ) %>%
   ggplot(aes(index,
@@ -2199,7 +2215,7 @@ s33.2 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v33_2_updated.png",
-  plot = s33.2, device = "png", dpi = 300,
+  plot = s33_2, device = "png", dpi = 300,
   height = 12,
   width = 12
 )
@@ -2209,9 +2225,9 @@ ggsave(
 
 ```{r v33n-plo6, fig.height=6}
 
-s33.3 <- lineup(
-  true = v3.sl.fitted,
-  samples = v33.sl.sim.fitted,
+s33_3 <- lineup(
+  true = v3_sl_fitted,
+  samples = v33_sl_sim_fitted,
   pos = 6
 ) %>%
   ggplot(aes(sample = resc_std)) +
@@ -2232,7 +2248,7 @@ s33.3 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v33_3_updated.png",
-  plot = s33.3, device = "png",
+  plot = s33_3, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
@@ -2242,9 +2258,9 @@ true plot is identified, the conditional residual does not follow a normal distr
 
 ```{r v33n-plo6-lcr, fig.height=6}
 
-s33.4 <- lineup(
-  true = v3.sl.lcr,
-  samples = v33.sl.simlcr, pos = 6
+s33_4 <- lineup(
+  true = v3_sl_lcr,
+  samples = v33_sl_simlcr, pos = 6
 ) %>%
   ggplot(aes(sample = resmcp)) +
   geom_qq() +
@@ -2264,7 +2280,7 @@ s33.4 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v33_4_updated.png",
-  plot = s33.4, device = "png",
+  plot = s33_4, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
@@ -2276,16 +2292,16 @@ ggsave(
 #### Simulation
 
 ```{r}
-v34.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 9865)
+v34_sl_sim <- sl_sim(v3_sl_mod, v3_sl, seed = 9865)
 ```
 
 ```{r nullfitted-v34}
-v34.sl.sim.fitted <- std_res(v34.sl.sim)
+v34_sl_sim_fitted <- std_res(v34_sl_sim)
 ```
 
 ```{r lcrsimnull-v34}
 
-v34.sl.simlcr <- lcr_res(v34.sl.sim)
+v34_sl_simlcr <- lcr_res(v34_sl_sim)
 ```
 
 
@@ -2293,9 +2309,9 @@ v34.sl.simlcr <- lcr_res(v34.sl.sim)
 
 ```{r v34n-plo2, fig.height=6}
 
-s34.1 <- lineup(
-  true = v3.sl.fitted,
-  samples = v34.sl.sim.fitted,
+s34_1 <- lineup(
+  true = v3_sl_fitted,
+  samples = v34_sl_sim_fitted,
   pos = 2
 ) %>%
   ggplot(aes(index,
@@ -2317,16 +2333,16 @@ s34.1 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v34_1_updated.png",
-  plot = s34.1, device = "png",
+  plot = s34_1, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
 ```
 
 ```{r v34n-plo4, fig.height=6}
-s34.2 <- lineup(
-  true = v3.sl.fitted,
-  samples = v34.sl.sim.fitted,
+s34_2 <- lineup(
+  true = v3_sl_fitted,
+  samples = v34_sl_sim_fitted,
   pos = 2
 ) %>%
   ggplot(aes(index,
@@ -2348,7 +2364,7 @@ s34.2 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v34_2_updated.png",
-  plot = s34.2, device = "png",
+  plot = s34_2, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
@@ -2357,9 +2373,9 @@ ggsave(
 
 ```{r v34n-plo6, fig.height=6}
 
-s34.3 <- lineup(
-  true = v3.sl.fitted,
-  samples = v34.sl.sim.fitted,
+s34_3 <- lineup(
+  true = v3_sl_fitted,
+  samples = v34_sl_sim_fitted,
   pos = 6
 ) %>%
   ggplot(aes(sample = resc_std)) +
@@ -2380,7 +2396,7 @@ s34.3 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v34_3_updated.png",
-  plot = s34.3, device = "png",
+  plot = s34_3, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
@@ -2389,9 +2405,9 @@ ggsave(
 
 ```{r v34n-plo6-lcr, fig.height=6}
 
-s34.4 <- lineup(
-  true = v3.sl.lcr,
-  samples = v34.sl.simlcr,
+s34_4 <- lineup(
+  true = v3_sl_lcr,
+  samples = v34_sl_simlcr,
   pos = 6
 ) %>%
 
@@ -2413,7 +2429,7 @@ s34.4 <- lineup(
 ggsave(
   path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v34_4_updated.png",
-  plot = s34.4, device = "png",
+  plot = s34_4, device = "png",
   dpi = 300,
   height = 12, width = 12
 )
