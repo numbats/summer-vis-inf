@@ -364,8 +364,7 @@ lcr_res <- function(data) {
 ```{r best-model-graphics}
 
 ggplot(sl.fitted, aes(index,
-  resm_std,
-  color = Subject
+  resm_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -378,8 +377,7 @@ ggplot(sl.fitted, aes(index,
   )
 
 ggplot(sl.fitted, aes(index,
-  resc_std,
-  color = Subject
+  resc_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -408,6 +406,647 @@ ggplot(sl.lcr, aes(sample = resmcp)) +
   + Index 60 shows a drop at day 9 for subject 332
 - Plot 6 shows the Gaussian QQ plot for the conditional residuals. However, from the plot, there are obvious tails. One extreme point on the upper end and two on the lower end may seem exceptional. The conditonal residuals might not follow a normal distribution.
 - Plot 7 shows the Gaussian QQ plot for the least confounded residuals. There also shows some tails.
+
+
+## Version 1
+
+```{r}
+set.seed(1234)
+
+N <- nrow(sleepstudy)
+nsubjects <- length(unique(sleepstudy$Subject))
+
+vc <- as.data.frame(VarCorr(slmod2))
+R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+G <- Matrix::bdiag(G1, G2)
+
+n <- getME(slmod2, "n")
+q <- getME(slmod2, "q")
+
+# normal error
+e <- mvrnorm(n = 1, mu = rep(0, n), Sigma = R)
+
+# normal random effects
+b <- mvrnorm(n = 1, mu = rep(0, q), Sigma = G)
+
+y <- as.vector(getME(slmod2, "X") %*% fixef(slmod2) + getME(slmod2, "Z") %*% b + e)
+
+v1.sl <- tibble(sleepstudy[, -1], y)
+```
+
+```{r v1mod}
+v1.sl.mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = v1.sl)
+```
+
+
+### Data plots from the 'best' model
+
+```{r v1data}
+v1.sl.fitted <- sl.extract.fitted(v1.sl.mod, v1.sl)
+v1.sl.lcr <- sl.extract.lcr(v1.sl.mod, v1.sl)
+```
+
+```{r}
+ggplot(v1.sl.fitted, aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = v1.sl.fitted %>% filter(resm_std > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+ggplot(v1.sl.fitted, aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = v1.sl.fitted %>% filter(abs(resc_std) > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+
+ggplot(v1.sl.fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+ggplot(v1.sl.lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+- It seems that there is no outlying observations in the marginal residuals
+- one or two outlying observations listed in the conditional residual
+- The conditional residual and least confounded residuals are not normally distributed as both are right-skewed.
+
+### 1st replication
+
+#### Simulation
+
+```{r}
+v11.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 1234)
+```
+
+```{r nullfitted-v11}
+v11.sl.sim.fitted <- std_res(v11.sl.sim)
+
+```
+
+```{r lcrsimnull-v11}
+
+v11.sl.simlcr <- lcr_res(v11.sl.sim)
+```
+
+##### Lineup plots
+
+```{r v11n-plot2}
+s11.1 <-
+  lineup(true = v1.sl.fitted,
+         samples = v11.sl.sim.fitted,
+         pos = 7) %>%
+  ggplot(aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v11_1.png",
+  plot = s11.1,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+```{r v11n-plot4, fig.height=6}
+s11.2 <-
+  lineup(true = v1.sl.fitted,
+         samples = v11.sl.sim.fitted,
+         pos = 7) %>%
+  ggplot(aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v11_2.png",
+  plot = s11.2,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+```{r v11n-plot6, fig.height=6}
+s11.3 <-
+  lineup(true = v1.sl.fitted,
+         samples = v11.sl.sim.fitted,
+         pos = 9) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v11_3.png",
+  plot = s11.3,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+```{r v11n-plot6-lcr, fig.height=6}
+s11.4 <-
+  lineup(true = v1.sl.lcr,
+         samples = v11.sl.simlcr,
+         pos = 9) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v11_4.png",
+  plot = s11.4,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+### 2nd replication
+
+### Simulation
+
+```{r}
+v12.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 2345)
+```
+
+```{r nullfitted-v12}
+v12.sl.sim.fitted <- std_res(v12.sl.sim)
+```
+
+```{r lcrsimnull-v12}
+v12.sl.simlcr <- lcr_res(v12.sl.sim)
+```
+
+#### Lineup plots
+
+```{r v12n-plo2, fig.height=6}
+s12.1 <-
+  lineup(true = v1.sl.fitted,
+         samples = v12.sl.sim.fitted,
+         pos = 7) %>%
+  ggplot(aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v12_1.png",
+  plot = s12.1,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+```{r v12n-plo4, fig.height=6}
+s12.2 <-
+  lineup(true = v1.sl.fitted,
+         samples = v12.sl.sim.fitted,
+         pos = 7) %>%
+  ggplot(aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v12_2.png",
+  plot = s12.2,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+```{r v12n-plo6}
+s12.3 <-
+  lineup(true = v1.sl.fitted,
+         samples = v12.sl.sim.fitted,
+         pos = 9) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v12_3.png",
+  plot = s12.3,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+```{r v12n-plo6-lcr, fig.height=6}
+s12.4 <-
+  lineup(true = v1.sl.lcr,
+         samples = v12.sl.simlcr,
+         pos = 9) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v12_4.png",
+  plot = s12.4,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+### 3rd replication
+
+### Simulation
+
+```{r}
+v13.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 3456)
+```
+
+```{r nullfitted-v13}
+v13.sl.sim.fitted <- std_res(v13.sl.sim)
+```
+
+```{r lcrsimnull-v13}
+v13.sl.simlcr <- lcr_res(v13.sl.sim)
+```
+
+#### Lineup plots
+
+```{r v13n-plo2, fig.height=6}
+s13.1 <-
+  lineup(true = v1.sl.fitted,
+         samples = v13.sl.sim.fitted,
+         pos = 13) %>%
+  ggplot(aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v13_1.png",
+  plot = s13.1,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+```{r v13n-plo4, fig.height=6}
+s13.2 <-
+  lineup(true = v1.sl.fitted,
+         samples = v13.sl.sim.fitted,
+         pos = 13) %>%
+  ggplot(aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v13_2.png",
+  plot = s13.2,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+```{r v13n-plo6, fig.height=6}
+s13.3 <-
+  lineup(true = v1.sl.fitted,
+         samples = v13.sl.sim.fitted,
+         pos = 4) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v13_3.png",
+  plot = s13.3,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+
+```{r v13n-plo6-lcr, fig.height=6}
+s13.4 <-
+  lineup(true = v1.sl.lcr,
+         samples = v13.sl.simlcr,
+         pos = 4) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v13_4.png",
+  plot = s13.4,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+### 4th replication
+
+### Simulation
+
+```{r}
+v14.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 9876)
+```
+
+```{r nullfitted-v14}
+v14.sl.sim.fitted <- std_res(v14.sl.sim)
+```
+
+```{r lcrsimnull-v14}
+v14.sl.simlcr <- lcr_res(v14.sl.sim)
+```
+
+#### Lineup plots
+
+```{r v14n-plo2, fig.height=6}
+s14.1 <-
+  lineup(true = v1.sl.fitted,
+         samples = v14.sl.sim.fitted,
+         pos = 13) %>%
+  ggplot(aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v14_1.png",
+  plot = s14.1,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+
+```{r v14n-plo4, fig.height=6}
+s14.2 <-
+  lineup(true = v1.sl.fitted,
+         samples = v14.sl.sim.fitted,
+         pos = 13) %>%
+  ggplot(aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v14_2.png",
+  plot = s14.2,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+```{r v14n-plo6, fig.height=6}
+s14.3 <-
+  lineup(true = v1.sl.fitted,
+         samples = v14.sl.sim.fitted,
+         pos = 4) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v14_3.png",
+  plot = s14.3,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
+
+
+```{r v14n-plo6-lcr, fig.height=6}
+s14.4 <-
+  lineup(true = v1.sl.lcr,
+         samples = v14.sl.simlcr,
+         pos = 4) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version1/"),
+  filename = "slp_v14_4.png",
+  plot = s14.4,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
+```
 
 
 ## Version 2
@@ -481,8 +1120,7 @@ v2.sl.lcr <- sl.extract.lcr(v2.sl.mod, v2.sl)
 ### Data plots
 ```{r}
 ggplot(v2.sl.fitted, aes(index,
-  resm_std,
-  color = Subject
+  resm_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -495,8 +1133,7 @@ ggplot(v2.sl.fitted, aes(index,
   )
 
 ggplot(v2.sl.fitted, aes(index,
-  resc_std,
-  color = Subject
+  resc_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -554,8 +1191,7 @@ s21.1 <- lineup(
   pos = 5
 ) %>%
   ggplot(aes(index,
-    resm_std,
-    color = Subject
+    resm_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -572,7 +1208,15 @@ s21.1 <- lineup(
 
 s21.1
 
-ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_1.png",   plot = s21.1, device = "png", dpi = 300,  height = 12, width = 12)
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version2/"),
+  filename = "slp_v21_1.png",
+  plot = s21.1,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
 ```
 
 ```{r v21n-plo4, fig.height=6}
@@ -583,8 +1227,7 @@ s21.2 <- lineup(
   pos = 5
 ) %>%
   ggplot(aes(index,
-    resc_std,
-    color = Subject
+    resc_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -599,7 +1242,15 @@ s21.2 <- lineup(
     legend.position = "none"
   )
 s21.2
- ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_2.png", plot = s21.2, device = "png", dpi = 300,height = 12, width = 12)
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version2/"),
+  filename = "slp_v21_2.png",
+  plot = s21.2,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
 ```
 
 ```{r v21n-plo6, fig.height=6}
@@ -626,7 +1277,16 @@ s21.3 <- lineup(
   )
 s21.3
 
- ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_3.png",  plot = s21.3, device = "png", dpi = 300,height = 12, width = 12)
+
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version2/"),
+  filename = "slp_v21_3.png",
+  plot = s21.3,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
 ```
 
 ```{r v21n-plo6-lcr, fig.height=6}
@@ -653,7 +1313,15 @@ s21.4 <- lineup(
   )
 
 s21.4
-ggsave(path= here::here("figures/lineup/"),filename = "slp_v21_4.png", plot = s21.4, device = "png", dpi = 300,height = 12, width = 12)
+ggsave(
+  path = here::here("figures/lineup/sleep_study/version2/"),
+  filename = "slp_v21_4.png",
+  plot = s21.4,
+  device = "png",
+  dpi = 300,
+  height = 12,
+  width = 12
+)
 ```
 
 
@@ -683,8 +1351,7 @@ s22.1 <- lineup(
   pos = 5
 ) %>%
   ggplot(aes(index,
-    resm_std,
-    color = Subject
+    resm_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -700,7 +1367,7 @@ s22.1 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v22_1.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v22_1.png",
   plot = s22.1, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -713,8 +1380,7 @@ s22.2 <- lineup(
   pos = 5
 ) %>%
   ggplot(aes(index,
-    resc_std,
-    color = Subject
+    resc_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -730,7 +1396,7 @@ s22.2 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v22_2.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v22_2.png",
   plot = s22.2, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -758,7 +1424,7 @@ s22.3 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v22_3.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v22_3.png",
   plot = s22.3, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -786,7 +1452,7 @@ s22.4 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v22_4.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v22_4.png",
   plot = s22.4, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -818,8 +1484,7 @@ s23.1 <- lineup(
   pos = 15
 ) %>%
   ggplot(aes(index,
-    resm_std,
-    color = Subject
+    resm_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -835,7 +1500,7 @@ s23.1 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v23_1.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v23_1.png",
   plot = s23.1, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -849,8 +1514,7 @@ s23.2 <- lineup(
   pos = 15
 ) %>%
   ggplot(aes(index,
-    resc_std,
-    color = Subject
+    resc_std
   )) +
   geom_point() +
   facet_wrap(~.sample, ncol = 5) +
@@ -865,7 +1529,7 @@ s23.2 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v23_2.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v23_2.png",
   plot = s23.2, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -894,7 +1558,7 @@ s23.3 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v23_3.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v23_3.png",
   plot = s23.3, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -923,7 +1587,7 @@ s23.4 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v23_4.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v23_4.png",
   plot = s23.4, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -957,8 +1621,7 @@ s24.1 <- lineup(
   pos = 15
 ) %>%
   ggplot(aes(index,
-    resm_std,
-    color = Subject
+    resm_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -972,7 +1635,7 @@ s24.1 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v24_1.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v24_1.png",
   plot = s24.1, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -986,8 +1649,7 @@ s24.2 <- lineup(
   pos = 15
 ) %>%
   ggplot(aes(index,
-    resc_std,
-    color = Subject
+    resc_std
   )) +
   geom_point() +
   facet_wrap(~.sample, ncol = 5) +
@@ -1002,7 +1664,7 @@ s24.2 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v24_2.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v24_2.png",
   plot = s24.2, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -1031,7 +1693,7 @@ s24.3 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v24_3.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v24_3.png",
   plot = s24.3, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -1061,7 +1723,7 @@ s24.4 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"), filename = "slp_v24_4.png",
+  path = here::here("figures/lineup/sleep_study/version2/"), filename = "slp_v24_4.png",
   plot = s24.4, device = "png", dpi = 300,
   height = 12, width = 12
 )
@@ -1111,8 +1773,7 @@ v3.sl.lcr <- sl.extract.lcr(v3.sl.mod, v3.sl)
 ```{r}
 
 ggplot(v3.sl.fitted, aes(index,
-  resm_std,
-  color = Subject
+  resm_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -1126,8 +1787,7 @@ ggplot(v3.sl.fitted, aes(index,
   )
 
 slp_dp2_updated <- ggplot(v3.sl.fitted, aes(index,
-  resc_std,
-  color = Subject
+  resc_std
 )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -1198,8 +1858,7 @@ s31.1 <- lineup(
   pos = 15
 ) %>%
   ggplot(aes(index,
-    resm_std,
-    color = Subject
+    resm_std
   )) +
   geom_point() +
   facet_wrap(~.sample, ncol = 5) +
@@ -1214,7 +1873,7 @@ s31.1 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v31_1_updated.png",
   plot = s31.1, device = "png",
   dpi = 300,
@@ -1230,8 +1889,7 @@ s31.2 <- lineup(
   pos = 15
 ) %>%
   ggplot(aes(index,
-    resc_std,
-    color = Subject
+    resc_std
   )) +
   geom_point() +
   facet_wrap(~.sample, ncol = 5) +
@@ -1246,7 +1904,7 @@ s31.2 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v31_2_updated.png",
   plot = s31.2, device = "png",
   dpi = 300,
@@ -1276,7 +1934,7 @@ s31.3 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v31_3_updated.png",
   plot = s31.3, device = "png",
   dpi = 300,
@@ -1307,7 +1965,7 @@ s31.4 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v31_4_updated.png",
   plot = s31.4, device = "png",
   dpi = 300,
@@ -1342,8 +2000,7 @@ s32.1 <- lineup(
   pos = 15
 ) %>%
   ggplot(aes(index,
-    resm_std,
-    color = Subject
+    resm_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -1359,7 +2016,7 @@ s32.1 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v32_1_updated.png",
   plot = s32.1, device = "png",
   dpi = 300,
@@ -1375,8 +2032,7 @@ s32.2 <- lineup(
   pos = 15
 ) %>%
   ggplot(aes(index,
-    resc_std,
-    color = Subject
+    resc_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -1392,7 +2048,7 @@ s32.2 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v32_2_updated.png",
   plot = s32.2,
   device = "png", dpi = 300,
@@ -1424,7 +2080,7 @@ s32.3 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v32_3_updated.png",
   plot = s32.3,
   device = "png", dpi = 300,
@@ -1456,7 +2112,7 @@ s32.4 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v32_4_updated.png",
   plot = s32.4, device = "png",
   dpi = 300,
@@ -1492,8 +2148,7 @@ s33.1 <- lineup(
   pos = 2
 ) %>%
   ggplot(aes(index,
-    resm_std,
-    color = Subject
+    resm_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -1509,7 +2164,7 @@ s33.1 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v33_1_updated.png",
   plot = s33.1, device = "png",
   dpi = 300,
@@ -1526,8 +2181,7 @@ s33.2 <- lineup(
   pos = 2
 ) %>%
   ggplot(aes(index,
-    resc_std,
-    color = Subject
+    resc_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -1543,7 +2197,7 @@ s33.2 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v33_2_updated.png",
   plot = s33.2, device = "png", dpi = 300,
   height = 12,
@@ -1576,7 +2230,7 @@ s33.3 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v33_3_updated.png",
   plot = s33.3, device = "png",
   dpi = 300,
@@ -1608,7 +2262,7 @@ s33.4 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v33_4_updated.png",
   plot = s33.4, device = "png",
   dpi = 300,
@@ -1645,8 +2299,7 @@ s34.1 <- lineup(
   pos = 2
 ) %>%
   ggplot(aes(index,
-    resm_std,
-    color = Subject
+    resm_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -1662,7 +2315,7 @@ s34.1 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v34_1_updated.png",
   plot = s34.1, device = "png",
   dpi = 300,
@@ -1677,8 +2330,7 @@ s34.2 <- lineup(
   pos = 2
 ) %>%
   ggplot(aes(index,
-    resc_std,
-    color = Subject
+    resc_std
   )) +
   geom_point() +
   geom_hline(yintercept = 0) +
@@ -1694,7 +2346,7 @@ s34.2 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v34_2_updated.png",
   plot = s34.2, device = "png",
   dpi = 300,
@@ -1726,7 +2378,7 @@ s34.3 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v34_3_updated.png",
   plot = s34.3, device = "png",
   dpi = 300,
@@ -1759,7 +2411,7 @@ s34.4 <- lineup(
   )
 
 ggsave(
-  path = here::here("figures/lineup/"),
+  path = here::here("figures/lineup/sleep_study/version3/"),
   filename = "slp_v34_4_updated.png",
   plot = s34.4, device = "png",
   dpi = 300,
