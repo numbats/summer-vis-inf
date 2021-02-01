@@ -111,9 +111,10 @@ Since $M_i$ are the same for each case, the plot 7 and 8 are ignored!
 $$\boldsymbol y \sim N(X\beta, Z \Gamma Z^\top + R)$$
 
 ```{r fitfn}
-# standardized marginal and confounded residual
-
+# returns a tibble with fitted values along with marginal , conditional residuals as well as std.marginal and conditional residuals
 sl_extract_fitted <- function(mod, data) {
+  
+
   N <- nrow(data)
   subjects <- unique(data$Subject)
   nsubjects <- length(subjects)
@@ -167,9 +168,11 @@ sl_extract_fitted <- function(mod, data) {
 
 ```{r lcrfn}
 
-# least confounded residual
+# returns the least confounded residual
 
 sl_extract_lcr <- function(mod, data) {
+ 
+  
   N <- nrow(data)
   subjects <- unique(data$Subject)
   nsubjects <- length(subjects)
@@ -252,8 +255,11 @@ sl_lcr <- sl_extract_lcr(slmod2, sleepstudy)
 ```
 
 
-```{r}
+```{r null-stdres}
+
+# function returns a tibble containing marginal, std marginal , conditonal and std. conditional residuals after 19 simulations
 std_res <- function(data) {
+  
 
 purrr::map_dfr(1:19, function(i) {
   df <- data %>% filter(.n == i)
@@ -297,7 +303,8 @@ purrr::map_dfr(1:19, function(i) {
 }
 ```
 
-```{r}
+```{r null-lcrres}
+# function returns least conditional residual after 19 simulations
 lcr_res <- function(data) {
   
   purrr::map_dfr(1:19, function(i) {
@@ -1107,10 +1114,13 @@ colnames(v2_sl) <- c("y", "Days", "Subject")
 # }
 
 # repc2
+```
 
+
+```{r t-distr}
 set.seed(1234)
 # multivariate t error term
-e <- as.vector(rmvt(1, sigma = R, df = 1))
+e <- as.vector(rmvt(1, sigma = R, df = 5))
 # normal random effects
 b <- mvrnorm(n = 1, mu = rep(0, q), Sigma = G)
 y <- as.vector(getME(slmod2, "X") %*% fixef(slmod2) + getME(slmod2, "Z") %*% b + e)
@@ -1181,7 +1191,7 @@ By adding the noise,
 
 ```{r}
 v21_sl_sim <- sl_sim(v2_sl_mod, v2_sl, seed = 9876)
-#v21_sl_sim <- sl_sim(v2_sl_mod, v2_lin, seed = 9876)
+v21_sl_sim_new <- sl_sim(v2_sl_mod_new, v2_lin, seed = 9876)
 
 ```
 
@@ -1189,12 +1199,14 @@ v21_sl_sim <- sl_sim(v2_sl_mod, v2_sl, seed = 9876)
 
 # standardized marginal and conditional residual
 v21_sl_sim_fitted <- std_res(v21_sl_sim)
+v21_sl_sim_fitted_new <- std_res(v21_sl_sim_new)
 ```
 
 ```{r lcrsimnull-v21}
 
 # least confounded conditional residual
 v21_sl_simlcr <- lcr_res(v21_sl_sim)
+v21_sl_simlcr_new <- lcr_res(v21_sl_sim_new)
 ```
 
 #### Lineup plots
@@ -1233,6 +1245,30 @@ ggsave(
   height = 12,
   width = 12
 )
+
+s21_1_new <- lineup(
+  true = v2_sl_fitted_new,
+  samples = v21_sl_sim_fitted_new,
+  pos = 5
+) %>%
+  ggplot(aes(index,
+    resm_std
+  )) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+s21_1_new
+
 ```
 
 ```{r v21n-plo4, fig.height=6}
@@ -1267,6 +1303,27 @@ ggsave(
   height = 12,
   width = 12
 )
+
+lineup(
+  true = v2_sl_fitted_new,
+  samples = v21_sl_sim_fitted_new,
+  pos = 5
+) %>%
+  ggplot(aes(index,
+    resc_std
+  )) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
 ```
 
 ```{r v21n-plo6, fig.height=6}
@@ -1303,6 +1360,28 @@ ggsave(
   height = 12,
   width = 12
 )
+
+lineup(
+  true = v2_sl_fitted_new,
+  samples = v21_sl_sim_fitted_new,
+  pos = 8
+) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample,
+    ncol = 5
+  ) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
 ```
 
 ```{r v21n-plo6-lcr, fig.height=6}
@@ -1338,6 +1417,29 @@ ggsave(
   height = 12,
   width = 12
 )
+
+lineup(
+  true = v2_sl_lcr_new,
+  samples = v21_sl_simlcr_new,
+  pos = 8
+) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample,
+    ncol = 5
+  ) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
 ```
 
 
