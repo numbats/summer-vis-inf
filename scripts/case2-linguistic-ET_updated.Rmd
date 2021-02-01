@@ -15,6 +15,8 @@ library(colorspace)
 library(dplyr)
 library(nullabor)
 library(MASS)
+library(mvtnorm)
+
 
 knitr::opts_chunk$set(message = FALSE,warning = FALSE#,
   #cache.path = "cache/",
@@ -408,8 +410,7 @@ ggplot(lin_fitted, aes(interaction(attitude, gender), resm_std)) +
 # Diagnostic Plot 2: Prescence of outlying observations
 
 ```{r plot2}
-ggplot(lin_fitted, aes(index, resm_std, 
-                   color = subject)) + 
+ggplot(lin_fitted, aes(index, resm_std)) + 
   geom_point() + 
   geom_hline(yintercept = 0) + 
   scale_color_discrete_qualitative()
@@ -447,8 +448,7 @@ ggplot(lin_unit, aes(index, Vi)) +
 # Diagnostic Plot 4: Prescense of outlying observations using conditional residual
 
 ```{r plot4}
-ggplot(lin_fitted, aes(index, resc_std, 
-                   color = subject)) + 
+ggplot(lin_fitted, aes(index, resc_std)) + 
   geom_point() + 
   geom_hline(yintercept = 3, lty = 2) + 
   scale_color_discrete_qualitative() + 
@@ -563,8 +563,7 @@ v1_lin_lcr <- lin_extract_lcr_mod(v1_lin_mod, v1_lin)
 
 ```{r v1-plots}
 ggplot(v1_lin_fitted, aes(index, 
-                          resm_std, 
-                          color = subject)) + 
+                          resm_std)) + 
   geom_point() + 
   geom_hline(yintercept = 0) +
   xlab(NULL) + 
@@ -576,8 +575,7 @@ ggplot(v1_lin_fitted, aes(index,
         legend.position="none")
 
 ggplot(v1_lin_fitted, aes(index, 
-                          resc_std, 
-                          color = subject)) + 
+                          resc_std)) + 
   geom_point() + 
   geom_hline(yintercept = 0)
 
@@ -642,8 +640,7 @@ l11.1 <- lineup(true = v1_lin_fitted,
                 samples = v11_lin_sim_fitted,
                 pos = 7) %>%
   ggplot(aes(index,
-             resm_std,
-             color = subject)) +
+             resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -686,8 +683,7 @@ l11.2 <- lineup(true = v1_lin_fitted,
                 samples = v11_lin_sim_fitted,
                 pos = 7) %>%
   ggplot(aes(index,
-             resc_std,
-             color = subject)) +
+             resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap(~ .sample, ncol = 5) +
@@ -814,8 +810,7 @@ l12_1 <- lineup(true = v1_lin_fitted,
                 samples = v12_lin_sim_fitted,
                 pos = 7) %>%
   ggplot(aes(index,
-             resm_std,
-             color = subject)) +
+             resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -846,8 +841,7 @@ l12_2 <- lineup(true = v1_lin_fitted,
                 samples = v12_lin_sim_fitted,
                 pos = 7) %>%
   ggplot(aes(index,
-             resc_std,
-             color = subject)) +
+             resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap(~ .sample, ncol = 5) +
@@ -972,8 +966,7 @@ l13_1 <- lineup(true = v1_lin_fitted,
                 samples = v13_lin_sim_fitted,
                 pos = 13) %>%
   ggplot(aes(index,
-             resm_std,
-             color = subject)) +
+             resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -1004,8 +997,7 @@ l13_2 <- lineup(true = v1_lin_fitted,
                 samples = v13_lin_sim_fitted,
                 pos = 13) %>%
   ggplot(aes(index,
-             resc_std,
-             color = subject)) +
+             resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap(~ .sample, ncol = 5) +
@@ -1132,8 +1124,7 @@ l14_1 <- lineup(true = v1_lin_fitted,
                 samples = v14_lin_sim_fitted,
                 pos = 13) %>%
   ggplot(aes(index,
-             resm_std,
-             color = subject)) +
+             resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -1163,8 +1154,7 @@ l14_2 <- lineup(true = v1_lin_fitted,
                 samples = v14_lin_sim_fitted,
                 pos = 13) %>%
   ggplot(aes(index,
-             resc_std,
-             color = subject)) +
+             resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap(~ .sample, ncol = 5) +
@@ -1270,6 +1260,7 @@ I added the student t distribution to the error term.
 
 ```{r}
 set.seed(1234)
+
 # multivariate t error term
 e <- as.vector(rmvt(1, sigma = R, df = 1))
 y <- as.vector(getME(fit, "X") %*% fixef(fit) + getME(fit, "Z") %*% b + e)
@@ -1291,7 +1282,7 @@ v2_lin_lcr <- lin_extract_lcr_mod(v2_lin_mod, v2_lin)
 
 ```{r v2-plots}
 lin21 <-
-  ggplot(v2_lin_fitted, aes(index, resm_std, color = subject)) +
+  ggplot(v2_lin_fitted, aes(index, resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   xlab(NULL) +
@@ -1349,8 +1340,7 @@ l21_1 <- lineup(true = v2_lin_fitted,
                 samples = v21_lin_sim_fitted,
                 pos = 5) %>%
   ggplot(aes(index,
-             resm_std,
-             color = subject)) +
+             resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -1380,7 +1370,7 @@ ggsave(
 l21_2 <- lineup(true = v2_lin_fitted,
                 samples = v21_lin_sim_fitted,
                 pos = 5) %>%
-  ggplot(aes(index, resc_std, color = subject)) +
+  ggplot(aes(index, resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap(~ .sample, ncol = 5) +
@@ -1495,8 +1485,7 @@ l22_1 <- lineup(true = v2_lin_fitted,
                 samples = v22_lin_sim_fitted,
                 pos = 5) %>%
   ggplot(aes(index,
-             resm_std,
-             color = subject)) +
+             resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -1526,8 +1515,7 @@ l22_2 <- lineup(true = v2_lin_fitted,
                 samples = v22_lin_sim_fitted,
                 pos = 5) %>%
   ggplot(aes(index,
-             resc_std,
-             color = subject)) +
+             resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap(~ .sample, ncol = 5) +
@@ -1644,8 +1632,7 @@ l23_1 <- lineup(true = v2_lin_fitted,
                 samples = v23_lin_sim_fitted,
                 pos = 15) %>%
   ggplot(aes(index,
-             resm_std,
-             color = subject)) +
+             resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -1675,8 +1662,7 @@ l23_2 <- lineup(true = v2_lin_fitted,
                 samples = v23_lin_sim_fitted,
                 pos = 15) %>%
   ggplot(aes(index,
-             resc_std,
-             color = subject)) +
+             resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -1793,8 +1779,7 @@ l24_1 <-
          samples = v24_lin_sim_fitted,
          pos = 15) %>%
   ggplot(aes(index, 
-             resm_std, 
-             color = subject)) +
+             resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -1823,7 +1808,7 @@ l24_2 <-
   lineup(true = v2_lin_fitted,
          samples = v24_lin_sim_fitted,
          pos = 15) %>%
-  ggplot(aes(index, resc_std, color = subject)) + geom_point() +
+  ggplot(aes(index, resc_std)) + geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
   xlab(NULL) + ylab(NULL) +
@@ -1999,16 +1984,14 @@ v3_lin_lcr <- lin_extract_lcr_mod(v3_lin_mod, v3_lin)
 
 ```{r}
 ggplot(v3_lin_fitted, aes(index, 
-                          resm_std, 
-                          color = subject)) + 
+                          resm_std)) + 
   geom_point() + 
   geom_hline(yintercept = 0)
 
 lin_dp2 <-
   ggplot(v3_lin_fitted, 
          aes(index, 
-             resc_std, 
-             color = subject)) + 
+             resc_std)) + 
   geom_point() + 
   geom_hline(yintercept = 0) + 
   ylab("Standardised conditional residuals") + 
@@ -2054,7 +2037,7 @@ l31_1 <-
   lineup(true = v3_lin_fitted,
          samples = v31_lin_sim_fitted,
          pos = 15) %>%
-  ggplot(aes(index, resm_std, color = subject)) +
+  ggplot(aes(index, resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -2083,7 +2066,7 @@ l31_2 <-
   lineup(true = v3_lin_fitted,
          samples = v31_lin_sim_fitted,
          pos = 15) %>%
-  ggplot(aes(index, resc_std, color = subject)) +
+  ggplot(aes(index, resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap(~ .sample, ncol = 5) +
@@ -2190,7 +2173,7 @@ l32_1 <-
   lineup(true = v3_lin_fitted,
          samples = v32_lin_sim_fitted,
          pos = 15) %>%
-  ggplot(aes(index, resm_std, color = subject)) +
+  ggplot(aes(index, resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -2219,7 +2202,7 @@ l32_2 <-
   lineup(true = v3_lin_fitted,
          samples = v32_lin_sim_fitted,
          pos = 15) %>%
-  ggplot(aes(index, resc_std, color = subject)) +
+  ggplot(aes(index, resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap(~ .sample, ncol = 5) +
@@ -2326,7 +2309,7 @@ l33_1 <-
   lineup(true = v3_lin_fitted,
          samples = v33_lin_sim_fitted,
          pos = 2) %>%
-  ggplot(aes(index, resm_std, color = subject)) +
+  ggplot(aes(index, resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -2355,7 +2338,7 @@ l33_2 <-
   lineup(true = v3_lin_fitted,
          samples = v33_lin_sim_fitted,
          pos = 2) %>%
-  ggplot(aes(index, resc_std, color = subject)) +
+  ggplot(aes(index, resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap(~ .sample, ncol = 5) +
@@ -2462,7 +2445,7 @@ l34_1 <-
   lineup(true = v3_lin_fitted,
          samples = v34_lin_sim_fitted,
          pos = 2) %>%
-  ggplot(aes(index, resm_std, color = subject)) +
+  ggplot(aes(index, resm_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap( ~ .sample, ncol = 5) +
@@ -2491,7 +2474,7 @@ l34_2 <-
   lineup(true = v3_lin_fitted,
          samples = v34_lin_sim_fitted,
          pos = 2) %>%
-  ggplot(aes(index, resc_std, color = subject)) +
+  ggplot(aes(index, resc_std)) +
   geom_point() +
   geom_hline(yintercept = 0) +
   facet_wrap(~ .sample, ncol = 5) +
