@@ -48,3 +48,9 @@ This is the repo for a 2020-2021 summer project to conduct a visual inference st
 
 * Generalize the code. 
 * Remove assigned color for sleep study subjects. 
+
+## 2021/02/04
+
+* Ladder plots with change of noise levels 
+* Some insight into what is the best noise
+* Further generalisation of the code 
