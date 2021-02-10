@@ -54,3 +54,8 @@ This is the repo for a 2020-2021 summer project to conduct a visual inference st
 * Ladder plots with change of noise levels 
 * Some insight into what is the best noise
 * Further generalisation of the code 
+
+## 2021/02/11
+
+* Plot the actual data 
+* Plot of data plots with number of subjects and noise varied
