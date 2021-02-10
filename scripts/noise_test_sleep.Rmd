@@ -1,0 +1,1068 @@
+---
+title: "case5 noise test"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lme4)
+library(ggplot2)
+library(mvtnorm)
+library(dplyr)
+library(tidyverse)
+library(plyr)
+library(nullabor)
+library(MASS)
+library(nlme)
+library(plotrix)
+```
+
+```{r data}
+# Data and its summary
+data("sleepstudy")
+
+```
+
+```{r fitted-values}
+
+testrandom <- plyr::ddply(sleepstudy, .(Subject), function(x) {
+  m <- lm(Reaction ~ Days, data = x)
+  data.frame(x, fitted = fitted(m)) # fitted mean values from Reaction ~ Days linear model added to data frame
+})
+
+# fitted values plotted against 10 days for each of 18 subjects
+
+ggplot(
+  testrandom,
+  aes(Days, fitted, group = Subject)
+) +
+  geom_line()
+```
+
+```{r random-intercept}
+
+# random intercept and random slope
+slmod1 <- lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
+
+# independent random effects
+slmod2 <- lmer(Reaction ~ Days + (Days - 1 | Subject) +
+  (1 | Subject), data = sleepstudy)
+# summary(slmod1)
+# summary(slmod2)
+
+set.seed(987654321)
+sl_mod2_sims <- simulate(slmod2, nsim = 19) # simulate the fitted linear mixed model
+sl_mod2_refit <- lapply(sl_mod2_sims, refit, object = slmod2) # refits the model
+sl_mod2_sim_ranef <- lapply(sl_mod2_refit, function(x) ranef(x)[[1]]) # extracts the modes of the random effects
+sl_mod2_sim_ranef <- do.call("rbind", sl_mod2_sim_ranef) # binds the 19 different dataframes as one
+sl_mod2_sim_ranef$.n <- rownames(sl_mod2_sim_ranef)
+
+sl_mod2_sim_ranef$.n <- as.numeric(str_extract(sl_mod2_sim_ranef$.n, "\\d+")) # assigns numbers for each of 19 simulations
+true_sl_mod1_ranef <- ranef(slmod1)$Subject # extracts modes of the correlated effects model
+
+# places the true model among the simulated models to see if correlation between the random effets was necessary
+sl_df <- nullabor:::add_true(sl_mod2_sim_ranef, true_sl_mod1_ranef, pos = 9)
+
+
+ggplot(
+  data = sl_df,
+  aes(
+    x = `(Intercept)`,
+    y = Days
+  )
+) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm", se = FALSE, alpha = 0.4) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL)
+```
+
+
+```{r fitfn}
+# returns a tibble with fitted values along with marginal , conditional residuals as well as std.marginal and conditional residuals
+sl_extract_fitted <- function(mod, data) {
+  
+  N <- nrow(data)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+  
+ # subjects <- unique(data$Subject)
+  #nsubjects <- length(subjects)
+
+  #y <- data$y
+  #X <- getME(mod, "X") # fixed effects model matrix
+  #beta <- fixef(mod) # fixed effects estimate
+  #Z <- getME(mod, "Z") # random effects matrix
+  #u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2]) # extracts the modes of the random effects
+  #q <- length(u)
+  
+  y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- getME(mod, "beta")
+  Z <- getME(mod, "Z")
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])# covariance matrix of random effects
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(mod))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+  
+
+  Sigma <- Z %*% G %*% t(Z) + R # covariance matrix of marginal distribution of observations
+
+  Sigma_inv <- solve(Sigma) # inverse of sigma
+
+  # variance of marginal residual = sigma-X(X^t * sigma^-1 * X)*X^t
+  # variance of conditional residual = R*((sigma^-1)-(sigma^-1)*X*(X^t*sigma^-1*X)^-1*X^t*sigma^-1)*R
+
+
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(mod) %*% t(X) %*% Sigma_inv # (sigma^-1)-(sigma^-1)*X*(X^t*sigma^-1*X)^-1*X^t*sigma^-1
+
+  varMargRes <- Sigma - X %*% vcov(mod) %*% t(X) # variance of marginal residual
+  varCondRes <- R %*% P %*% R # variance of conditional residual
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G # random effects variance
+
+  # fitted or estimated marginal mean = X*Beta
+
+  fitted_df <- data %>%
+    dplyr::mutate(
+      fitted = as.vector(X %*% beta),
+      resm = y - fitted,
+      resc = as.vector(y - fitted - Z %*% u),
+      index = 1:n()
+    ) %>%
+    mutate(
+      resm_std = resm / sqrt(diag(varMargRes)[index]), # standardized marginal residual
+      resc_std = resc / sqrt(diag(varCondRes)[index]) # standardized conditional residual
+    ) %>%
+    ungroup()
+
+  return(fitted_df)
+}
+```
+
+```{r lcrfn}
+
+# returns the least confounded residual
+
+sl_extract_lcr <- function(mod, data) {
+
+  #n <- getME(mod, "n")
+  N <- nrow(data)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+ # y <- data$y
+  #X <- getME(mod, "X")
+  #beta <- fixef(mod)
+  #Z <- getME(mod, "Z")
+  #u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2])
+  #q <- length(u)
+  
+  
+  y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- getME(mod, "beta")
+  Z <- getME(mod, "Z")
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(mod))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+  Sigma <- Z %*% G %*% t(Z) + R
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(mod) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(mod) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- as.vector(y - fitted - Z %*% u)
+  index <- 1:nrow(data)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+
+  # standardized least confounded residual = c^T * e / sqrt(CRQRC^t)
+
+  R_half <- expm::sqrtm(R)
+
+  # singer et al calculation for least confounded residual
+  auxqn <- eigen((R_half %*% P %*% R_half),
+    symmetric = T,
+    only.values = FALSE
+  )
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var_resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var_resmcp))
+
+  resmcp_sl <- tibble::tibble(resmcp)
+
+  return(resmcp_sl)
+}
+```
+
+
+
+
+
+
+```{r simulate}
+# simulation of the models
+sl_sim <- function(mod, data, nsim = 19, seed, std = FALSE) {
+  fit_sim <- simulate(mod, nsim = nsim, seed = seed)
+  fit_refit <- lapply(fit_sim, refit, object = mod)
+  fit_simy <- lapply(fit_refit, function(x) getME(x, "y"))
+  fit_simy_y <- do.call("cbind", fit_simy)
+  fit_simy_y <- reshape2::melt(fit_simy_y)[-1]
+  names(fit_simy_y) <- c(".n", "y")
+  fit_simy_y$.n <- as.numeric(str_extract(fit_simy_y$.n, "\\d+"))
+  fit_simy_y$Subject <- rep(data$Subject, 19)
+  fit_simy_y$Days <- rep(data$Days, 19)
+  return(fit_simy_y)
+}
+```
+
+```{r residual-extract}
+colnames(sleepstudy)[1] <- c("y")
+sl_fitted <- sl_extract_fitted(slmod2, sleepstudy)
+sl_lcr <- sl_extract_lcr(slmod2, sleepstudy)
+```
+
+
+```{r null-stdres}
+
+# function returns a tibble containing marginal, std marginal , conditonal and std. conditional residuals after 19 simulations
+std_res <- function(data) {
+  
+
+
+purrr::map_dfr(1:19, function(i) {
+  df <- data %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
+  Z <- getME(m, "Z")
+  u <- getME(m, "b")
+  q <- getME(m, "q")
+
+ nrfacs <- getME(m,"n_rfacs")
+  num <- 0
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(m))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+  
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+}
+```
+
+```{r null-lcrres}
+# function returns least conditional residual after 19 simulations
+lcr_res <- function(data) {
+  
+  purrr::map_dfr(1:19, function(i) {
+  df <- data %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
+  Z <- getME(m, "Z")
+  u <- getME(m, "b")
+  q <- getME(m, "q")
+
+ nrfacs <- getME(m,"n_rfacs")
+ num <- 0 
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(m))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half),
+    symmetric = T,
+    only.values = FALSE
+  )
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var_resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var_resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+  
+}
+```
+
+
+```{r corrupt}
+
+#noise added to 10% 
+set.seed(1000)
+sample_10 <- sleepstudy %>%
+  sample_n(size = 18 ) %>%
+  tibble()
+
+sample_10$y <- sample_10$y + rnorm(18,10) 
+
+rest <- anti_join(sleepstudy,
+  sample_10,
+  by = c(
+    "Days",
+    "Subject"
+  )
+)
+
+d10 <- rbind(
+  sample_10,
+  rest
+)
+
+set1 <- d10 %>% arrange(Subject, Days)
+set1_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = set1)
+
+set1_sl_fitted <- sl_extract_fitted(set1_mod, set1)
+set1_sl_lcr <- sl_extract_lcr(set1_mod, set1)
+
+```
+
+# plots for set1
+
+```{r}
+
+ggplot(set1_sl_fitted, aes(index,
+  resm_std
+)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = set1_sl_fitted %>%
+      filter(resm_std > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+
+ggplot(set1_sl_fitted, aes(index,
+  resc_std
+)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = set1_sl_fitted %>%
+      filter(abs(resc_std) > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  ) +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+
+
+
+ggplot(
+  set1_sl_fitted,
+  aes(sample = resc_std)
+) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+ggplot(set1_sl_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+```
+## ladder plots 
+
+```{r}
+library(dplyr)
+resmbefore <- sl_fitted %>%
+  dplyr::select(resm_std, index) %>%
+  dplyr::rename(before = resm_std)
+
+
+resmafter <- set1_sl_fitted %>%
+  dplyr::select(resm_std, index) %>%
+  dplyr::rename(after = resm_std)
+
+resm_set_1 <- resmbefore %>%
+  left_join(resmafter, by = "index") %>%
+  dplyr::select(-index)
+
+ladderplot(resm_set_1)+
+  title("SET 1")
+
+
+#####
+
+rescbefore <- sl_fitted %>%
+  dplyr::select(resc_std, index) %>%
+  dplyr::rename(before = resc_std)
+
+
+rescafter <- set1_sl_fitted %>%
+  dplyr::select(resc_std, index) %>%
+  dplyr::rename(after = resc_std)
+
+resc_set_1 <- rescbefore %>%
+  left_join(rescafter, by = "index") %>%
+  dplyr::select(-index)
+
+ladderplot(resc_set_1)+
+  title("SET 1")
+
+###
+lcrbefore <- sl_lcr %>%
+  dplyr::rename(before = resmcp)
+
+
+lcrafter <- set1_sl_lcr %>%
+  dplyr::rename(after = resmcp)
+
+lcr_set_1 <- cbind(lcrbefore,lcrafter) 
+
+ ladderplot(lcr_set_1)+
+  title("SET 1")
+
+
+```
+
+```{r}
+set1_sl_sim <- sl_sim(set1_mod, set1, seed = 2353)
+set1_sl_sim_fitted <- std_res(set1_sl_sim)
+set1_sl_simlcr <- lcr_res(set1_sl_sim)
+```
+
+```{r}
+lineup(
+  true = set1_sl_fitted,
+  samples = set1_sl_sim_fitted,
+  pos = 15
+) %>%
+  ggplot(aes(index,
+    resm_std
+  )) +
+  geom_point() +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+
+lineup(
+  true = set1_sl_fitted,
+  samples = set1_sl_sim_fitted,
+  pos = 15
+) %>%
+  ggplot(aes(index,
+    resc_std
+  )) +
+  geom_point() +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+lineup(
+  true = set1_sl_fitted,
+  samples = set1_sl_sim_fitted,
+  pos = 11
+) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+
+lineup(
+  true = set1_sl_lcr,
+  samples = set1_sl_simlcr,
+  pos = 11
+) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+```
+
+
+## set 2
+
+```{r}
+set.seed(1234)
+
+# two subjects selected at random and 10% of median value is added as noise
+samp_df <- sleepstudy %>%
+  group_by(Subject) %>%
+  sample_n(size = 2) %>%
+  tibble()
+
+samp_df$y <- samp_df$y + median(sleepstudy$y) * 0.1
+
+rest_df <- anti_join(sleepstudy,
+  samp_df,
+  by = c(
+    "Days",
+    "Subject"
+  )
+)
+
+d <- rbind(
+  samp_df,
+  rest_df
+)
+
+set2_sl <- d %>% arrange(Subject, Days)
+```
+
+```{r}
+set2_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = set2_sl)
+
+set2_sl_fitted <- sl_extract_fitted(set2_sl_mod, set2_sl)
+set2_sl_lcr <- sl_extract_lcr(set2_sl_mod, set2_sl)
+```
+
+```{r}
+
+
+
+
+resmafter <- set2_sl_fitted %>%
+  dplyr::select(resm_std, index) %>%
+  dplyr::rename(after = resm_std)
+
+resm_set_2 <- resmbefore %>%
+  left_join(resmafter, by = "index") %>%
+  dplyr::select(-index)
+
+ladderplot(resm_set_2)+
+  title("SET 2")
+
+
+#####
+
+
+
+rescafter <- set2_sl_fitted %>%
+  dplyr::select(resc_std, index) %>%
+  dplyr::rename(after = resc_std)
+
+resc_set_2 <- rescbefore %>%
+  left_join(rescafter, by = "index") %>%
+  dplyr::select(-index)
+
+ladderplot(resc_set_2)+
+  title("SET 2")
+
+###
+
+
+lcrafter <- set2_sl_lcr %>%
+  dplyr::rename(after = resmcp)
+
+lcr_set_2 <- cbind(lcrbefore,lcrafter) 
+
+ladderplot(lcr_set_2)+
+  title("SET 2")
+
+
+```
+
+```{r}
+set2_sl_sim <- sl_sim(set2_sl_mod, set2_sl, seed = 2353)
+set2_sl_sim_fitted <- std_res(set2_sl_sim)
+set2_sl_simlcr <- lcr_res(set2_sl_sim)
+```
+
+```{r}
+lineup(
+  true = set2_sl_fitted,
+  samples = set2_sl_sim_fitted,
+  pos = 15
+) %>%
+  ggplot(aes(index,
+    resm_std
+  )) +
+  geom_point() +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+
+lineup(
+  true = set2_sl_fitted,
+  samples = set2_sl_sim_fitted,
+  pos = 15
+) %>%
+  ggplot(aes(index,
+    resc_std
+  )) +
+  geom_point() +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+lineup(
+  true = set2_sl_fitted,
+  samples = set2_sl_sim_fitted,
+  pos = 11
+) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+
+lineup(
+  true = set2_sl_lcr,
+  samples = set2_sl_simlcr,
+  pos = 11
+) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+```
+## set 3
+
+```{r t-distr}
+set.seed(1234)
+
+
+N <- nrow(sleepstudy)
+nsubjects <- length(unique(sleepstudy$Subject))
+
+vc <- as.data.frame(VarCorr(slmod2))
+R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+G <- Matrix::bdiag(G1, G2)
+n <- getME(slmod2, "n")
+q <- getME(slmod2, "q")
+
+# multivariate t error term
+e <- as.vector(rmvt(1, sigma = R, df = 1))
+# normal random effects
+b <- mvrnorm(n = 1, mu = rep(0, q), Sigma = G)
+y <- as.vector(getME(slmod2, "X") %*% fixef(slmod2) + getME(slmod2, "Z") %*% b + e)
+
+set3_sl <- tibble(sleepstudy[, -1], y)
+
+```
+
+```{r set3-model}
+
+set3_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = set3_sl)
+
+set3_sl_fitted <- sl_extract_fitted(set3_sl_mod, set3_sl)
+set3_sl_lcr <- sl_extract_lcr(set3_sl_mod, set3_sl)
+
+```
+
+
+```{r}
+
+resmafter <- set3_sl_fitted %>%
+  dplyr::select(resm_std, index) %>%
+  dplyr::rename(after = resm_std)
+
+resm_set_3 <- resmbefore %>%
+  left_join(resmafter, by = "index") %>%
+  dplyr::select(-index)
+
+ ladderplot(resm_set_3)+
+  title("SET 3")
+
+
+#####
+
+
+
+rescafter <- set3_sl_fitted %>%
+  dplyr::select(resc_std, index) %>%
+  dplyr::rename(after = resc_std)
+
+resc_set_3 <- rescbefore %>%
+  left_join(rescafter, by = "index") %>%
+  dplyr::select(-index)
+
+ladderplot(resc_set_3)+
+  title("SET 3")
+
+###
+
+
+lcrafter <- set3_sl_lcr %>%
+  dplyr::rename(after = resmcp)
+
+lcr_set_3 <- cbind(lcrbefore,lcrafter) 
+
+ ladderplot(lcr_set_3)+
+  title("SET 3")
+
+
+```
+```{r}
+set3_sl_sim <- sl_sim(set3_sl_mod, set3_sl, seed = 2353)
+set3_sl_sim_fitted <- std_res(set3_sl_sim)
+set3_sl_simlcr <- lcr_res(set3_sl_sim)
+```
+
+```{r}
+lineup(
+  true = set3_sl_fitted,
+  samples = set3_sl_sim_fitted,
+  pos = 15
+) %>%
+  ggplot(aes(index,
+    resm_std
+  )) +
+  geom_point() +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+
+lineup(
+  true = set3_sl_fitted,
+  samples = set3_sl_sim_fitted,
+  pos = 15
+) %>%
+  ggplot(aes(index,
+    resc_std
+  )) +
+  geom_point() +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+lineup(
+  true = set3_sl_fitted,
+  samples = set3_sl_sim_fitted,
+  pos = 11
+) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+
+lineup(
+  true = set3_sl_lcr,
+  samples = set3_sl_simlcr,
+  pos = 11
+) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+```
+```{r}
+ladderplot(resm_set_1)+
+  title("SET 1")
+
+ladderplot(resm_set_2)+
+  title("SET 2")
+
+ladderplot(resm_set_3)+
+  title("SET 3")
+```
+```{r}
+ladderplot(resc_set_1)+
+  title("SET 1")
+ladderplot(resc_set_2)+
+  title("SET 2")
+ladderplot(resc_set_3)+
+  title("SET 3")
+```
+```{r}
+ladderplot(lcr_set_1)+
+  title("SET 1")
+ladderplot(lcr_set_2)+
+  title("SET 2")
+ladderplot(lcr_set_3)+
+  title("SET 3")
+```
+
