@@ -97,15 +97,19 @@ At this stage, the variables, interaction of `gender` and `race`, `sicdegp`, `ag
 ```{r model}
 colnames(autism)[4] <- c("y")
 autism_mod <- lmer(y ~ age2 + sicdegp + gender:race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism)
+
+
 vc <- as.data.frame(VarCorr(autism_mod))
 # vc$vcov[vc$grp == "childid.1"]
 ```
 
 ```{r fittedfn}
 autism_extract_fitted_mod <- function(mod, data) {
-  n <- getME(mod, "n")
-  child <- unique(data$childid)
-  nchild <- length(child)
+ 
+ 
+  # n <- getME(mod, "n")
+   N <- nrow(data)
+
 
   y <- getME(mod, "y")
   X <- getME(mod, "X")
@@ -114,11 +118,39 @@ autism_extract_fitted_mod <- function(mod, data) {
   u <- getME(mod, "b")
   q <- getME(mod, "q")
 
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
   vc <- as.data.frame(VarCorr(mod))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(n)
-  G1 <- vc$vcov[vc$grp == "childid"] * diag(nchild)
-  G2 <- vc$vcov[vc$grp == "childid.1"] * diag(nchild)
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
   G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(mod))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+
 
  Sigma <- Z %*% G %*% t(Z) + R
   Sigma_inv <- solve(Sigma)
@@ -148,22 +180,49 @@ autism_extract_fitted_mod <- function(mod, data) {
 
 ```{r lcrfn}
 autism_extract_lcr_mod <- function(mod, data) {
-  n <- getME(mod, "n")
-  child <- unique(data$childid)
-  nchild <- length(child)
+  
 
-  y <- getME(mod, "y")
+  
+  N <- nrow(data)
+ y <- getME(mod, "y")
   X <- getME(mod, "X")
   beta <- getME(mod, "beta")
   Z <- getME(mod, "Z")
   u <- getME(mod, "b")
   q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
 
   vc <- as.data.frame(VarCorr(mod))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(n)
-  G1 <- vc$vcov[vc$grp == "childid"] * diag(nchild)
-  G2 <- vc$vcov[vc$grp == "childid.1"] * diag(nchild)
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
   G <- Matrix::bdiag(G1, G2)
+}
 
   Sigma <- Z %*% G %*% t(Z) + R
 
@@ -188,11 +247,11 @@ autism_extract_lcr_mod <- function(mod, data) {
 
   p <- length(beta)
 
-  lt <- sqrt(solve(diag((auxqn$values[1:(n - p)])))) %*% t(auxqn$vectors[1:n, 1:(n - p)]) %*% solve(expm::sqrtm(R[1:n, 1:n]))
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
 
-  var.resmcp <- lt %*% varCondRes[1:n, 1:n] %*% t(lt)
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
 
-  resmcp <- (lt %*% resc[1:n]) / sqrt(diag(var.resmcp))
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
 
   resmcp_sl <- tibble::tibble(resmcp)
 
@@ -219,17 +278,14 @@ autism_sim <- function(mod, data, nsim = 19, seed, std = FALSE) {
 }
 ```
 
-```{r}
 
+```{r}
 std_res <- function(data) {
-purrr::map_dfr(1:19, function(i) {
+  purrr::map_dfr(1:19, function(i) {
   df <- data %>% filter(.n == i)
   m <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = df)
-
-  n <- getME(m, "n")
-  child <- unique(df$childid)
-  nchild <- length(child)
-
+  
+  N <- nrow(df)
   y <- getME(m, "y")
   X <- getME(m, "X")
   beta <- getME(m, "beta")
@@ -237,28 +293,58 @@ purrr::map_dfr(1:19, function(i) {
   u <- getME(m, "b")
   q <- getME(m, "q")
 
-  vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(n)
-  G1 <- vc$vcov[vc$grp == "childid"] * diag(nchild)
-  G2 <- vc$vcov[vc$grp == "childid.1"] * diag(nchild)
-  G <- Matrix::bdiag(G1, G2)
+ nrfacs <- getME(m,"n_rfacs")
+  num <- 0
 
-  Sigma <- Z %*% G %*% t(Z) + R
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(m))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
   Sigma_inv <- solve(Sigma)
+
 
   P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
 
-  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
-  varCondRes <- R %*% P %*% R
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
   varU <- G - G %*% t(Z) %*% P %*% Z %*% G
-
-  fitted <- as.vector(X %*% beta)
-  resm <- y - fitted
-  resc <- y - fitted - as.vector(Z %*% u)
-  index <- 1:nrow(df)
-  resm_std <- resm / sqrt(diag(varMargRes)[index])
-  resc_std <- resc / sqrt(diag(varCondRes)[index])
-
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
   tibble::tibble(df, fitted, resm_std, resc_std, index)
 })
 }
@@ -270,11 +356,13 @@ lcr_res <- function(data) {
   
   purrr::map_dfr(1:19, function(i) {
   df <- data %>% filter(.n == i)
-  m <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = df)
+ m <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = df)
 
-  n <- getME(m, "n")
-  child <- unique(df$childid)
-  nchild <- length(child)
+  N <- nrow(df)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
 
   y <- getME(m, "y")
   X <- getME(m, "X")
@@ -283,11 +371,38 @@ lcr_res <- function(data) {
   u <- getME(m, "b")
   q <- getME(m, "q")
 
+ nrfacs <- getME(m,"n_rfacs")
+ num <- 0 
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
   vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(n)
-  G1 <- vc$vcov[vc$grp == "childid"] * diag(nchild)
-  G2 <- vc$vcov[vc$grp == "childid.1"] * diag(nchild)
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
   G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(m))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
 
   Sigma <- Z %*% G %*% t(Z) + R
   Sigma_inv <- solve(Sigma)
@@ -307,16 +422,18 @@ lcr_res <- function(data) {
 
   R_half <- expm::sqrtm(R)
 
-  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+  auxqn <- eigen((R_half %*% P %*% R_half),
+    symmetric = T,
+    only.values = FALSE
+  )
 
   p <- length(beta)
 
-  lt <- sqrt(solve(diag((auxqn$values[1:(n - p)])))) %*% t(auxqn$vectors[1:n, 1:(n - p)]) %*% solve(expm::sqrtm(R[1:n, 1:n]))
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
 
-  var.resmcp <- lt %*% varCondRes[1:n, 1:n] %*% t(lt)
+  var_resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
 
-  resmcp <- (lt %*% resc[1:n]) / sqrt(diag(var.resmcp))
-
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var_resmcp))
   .n <- i
 
   tibble::tibble(.n, resmcp)
@@ -578,7 +695,7 @@ autism_v12n_fitted <- std_res(autism_v12_sim)
 ```
 
 ```{r v12n.lcr}
-autism.v12n.lcr <- lcr_res(autism_v12_sim)
+autism_v12n_lcr <- lcr_res(autism_v12_sim)
 ```
 
 ### Outlying observations
@@ -1434,7 +1551,7 @@ autism_v24n_fitted <- std_res(autism_v24_sim)
 ```
 
 ```{r v24n.lcr}
-autism.v24n.lcr <- lcr_res(autism_v24_sim)
+autism_v24n_lcr <- lcr_res(autism_v24_sim)
 ```
 
 ### Outlying observations

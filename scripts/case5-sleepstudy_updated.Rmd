@@ -15,6 +15,7 @@ library(tidyverse)
 library(plyr)
 library(nullabor)
 library(MASS)
+library(nlme)
 ```
 
 ```{r data}
@@ -114,23 +115,62 @@ $$\boldsymbol y \sim N(X\beta, Z \Gamma Z^\top + R)$$
 # returns a tibble with fitted values along with marginal , conditional residuals as well as std.marginal and conditional residuals
 sl_extract_fitted <- function(mod, data) {
   
-
   N <- nrow(data)
-  subjects <- unique(data$Subject)
-  nsubjects <- length(subjects)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+  
+ # subjects <- unique(data$Subject)
+  #nsubjects <- length(subjects)
 
-  y <- data$y
-  X <- getME(mod, "X") # fixed effects model matrix
-  beta <- fixef(mod) # fixed effects estimate
-  Z <- getME(mod, "Z") # random effects matrix
-  u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2]) # extracts the modes of the random effects
-  q <- length(u)
+  #y <- data$y
+  #X <- getME(mod, "X") # fixed effects model matrix
+  #beta <- fixef(mod) # fixed effects estimate
+  #Z <- getME(mod, "Z") # random effects matrix
+  #u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2]) # extracts the modes of the random effects
+  #q <- length(u)
+  
+  y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- getME(mod, "beta")
+  Z <- getME(mod, "Z")
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
 
-  vc <- as.data.frame(VarCorr(mod)) # covariances and correlations of model
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N) # covariance matrix of random errors
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
-  G <- Matrix::bdiag(G1, G2) # covariance matrix of random effects
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])# covariance matrix of random effects
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(mod))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+  
 
   Sigma <- Z %*% G %*% t(Z) + R # covariance matrix of marginal distribution of observations
 
@@ -171,25 +211,61 @@ sl_extract_fitted <- function(mod, data) {
 # returns the least confounded residual
 
 sl_extract_lcr <- function(mod, data) {
- 
-  
-  N <- nrow(data)
-  subjects <- unique(data$Subject)
-  nsubjects <- length(subjects)
 
-  y <- data$y
+  #n <- getME(mod, "n")
+  N <- nrow(data)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+ # y <- data$y
+  #X <- getME(mod, "X")
+  #beta <- fixef(mod)
+  #Z <- getME(mod, "Z")
+  #u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2])
+  #q <- length(u)
+  
+  
+  y <- getME(mod, "y")
   X <- getME(mod, "X")
-  beta <- fixef(mod)
+  beta <- getME(mod, "beta")
   Z <- getME(mod, "Z")
-  u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2])
-  q <- length(u)
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
 
   vc <- as.data.frame(VarCorr(mod))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
   G <- Matrix::bdiag(G1, G2)
-
+}
   Sigma <- Z %*% G %*% t(Z) + R
 
   Sigma_inv <- solve(Sigma)
@@ -261,27 +337,57 @@ sl_lcr <- sl_extract_lcr(slmod2, sleepstudy)
 std_res <- function(data) {
   
 
+
 purrr::map_dfr(1:19, function(i) {
   df <- data %>% filter(.n == i)
   m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
 
   N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
 
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
   Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
+  u <- getME(m, "b")
+  q <- getME(m, "q")
+
+ nrfacs <- getME(m,"n_rfacs")
+  num <- 0
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
 
   vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
   G <- Matrix::bdiag(G1, G2)
-
+}
+  
   Sigma <- Z %*% G %*% t(Z) + R
   Sigma_inv <- solve(Sigma)
 
@@ -312,21 +418,50 @@ lcr_res <- function(data) {
   m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
 
   N <- nrow(df)
-  subjects <- unique(df$Subject)
-  nsubjects <- length(subjects)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
 
-  y <- df$y
-  X <- model.matrix(~Days, data = df)
-  beta <- fixef(m)
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
   Z <- getME(m, "Z")
-  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
-  q <- length(u)
+  u <- getME(m, "b")
+  q <- getME(m, "q")
+
+ nrfacs <- getME(m,"n_rfacs")
+ num <- 0 
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
 
   vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
-  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
   G <- Matrix::bdiag(G1, G2)
+}
 
   Sigma <- Z %*% G %*% t(Z) + R
   Sigma_inv <- solve(Sigma)

@@ -15,7 +15,9 @@ library(colorspace)
 library(dplyr)
 library(nullabor)
 library(MASS)
+library(nlme)
 library(mvtnorm)
+library(nlme)
 
 
 knitr::opts_chunk$set(message = FALSE,warning = FALSE#,
@@ -82,26 +84,52 @@ assuming that $\boldsymbol{u} = (u_1, ..., u_{13})^\top \sim N(\boldsymbol{0}, \
 
 ```{r fitfn}
 lin_extract_fitted_mod <- function(mod, data) {
-  N <- nrow(data)
-  subjects <- unique(data$subject)
-  nsubject <- length(subjects)
-  scenarios <- unique(data$scenario)
-  nscenario <- length(scenarios)
+  
 
-  y <- data$y
-  X <- model.matrix(~ attitude + gender, data = data)
-  beta <- fixef(mod)
-  Z1 <- model.matrix(~ scenario - 1, data = data)
-  Z2 <- model.matrix(~ subject - 1, data = data)
-  Z <- cbind(Z1, Z2)
-  u <- c(ranef(mod)$scenario[, 1], ranef(mod)$subject[, 1])
-  q <- length(u)
+
+  
+  N <- nrow(data)
+
+  y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- getME(mod, "beta")
+  Z <- getME(mod, "Z")
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
 
   vc <- as.data.frame(VarCorr(mod))
-  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
-  G1 <- vc$vcov[vc$grp == "scenario"] * diag(nscenario)
-  G2 <- vc$vcov[vc$grp == "subject"] * diag(nsubject)
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
   G <- Matrix::bdiag(G1, G2)
+}
+
 
   Sigma <- Z %*% G %*% t(Z) + R
 
@@ -186,29 +214,60 @@ lin_extract_unit_mod <- function(mod, data){
   return(unit_df)
 }
 ```
-
 ```{r}
 lin_extract_lcr_mod <- function(mod, data){
+ 
   N <- nrow(data)
-  subjects <- unique(data$subject)
-  nsubject <- length(subjects)
-  scenarios <- unique(data$scenario)
-  nscenario <- length(scenarios)
+  
 
-  y <- data$y
-  X <- model.matrix(~attitude + gender, data = data)
-  beta <- fixef(mod)
-  Z1 <- model.matrix(~scenario - 1, data = data)
-  Z2 <- model.matrix(~subject - 1, data = data)
-  Z <- cbind(Z1, Z2)  
-  u <- c(ranef(mod)$scenario[,1], ranef(mod)$subject[,1])
-  q <- length(u)
+  #y <- data$y
+  #X <- model.matrix(~attitude + gender, data = data)
+  #beta <- fixef(mod)
+  #Z1 <- model.matrix(~scenario - 1, data = data)
+  #Z2 <- model.matrix(~subject - 1, data = data)
+  #Z <- cbind(Z1, Z2)  
+  #u <- c(ranef(mod)$scenario[,1], ranef(mod)$subject[,1])
+  #q <- length(u)
+  
+  y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- getME(mod, "beta")
+  Z <- getME(mod, "Z")
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
 
   vc <- as.data.frame(VarCorr(mod))
-  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
-  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
-  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
   G <- Matrix::bdiag(G1, G2)
+}
 
   Sigma <- Z %*% G %*% t(Z) + R 
 
@@ -285,25 +344,46 @@ std_res <- function(data) {
             data = df)
   
   N <- nrow(df)
-  subjects <- unique(df$subject)
-  nsubject <- length(subjects)
-  scenarios <- unique(df$scenario)
-  nscenario <- length(scenarios)
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
+  Z <- getME(m, "Z")
+  u <- getME(m, "b")
+  q <- getME(m, "q")
 
-  y <- df$y
-  X <- model.matrix(~attitude + gender, data = df)
-  beta <- fixef(m)
-  Z1 <- model.matrix(~scenario - 1, data = df)
-  Z2 <- model.matrix(~subject - 1, data = df)
-  Z <- cbind(Z1, Z2)
-  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
-  q <- length(u)
+ nrfacs <- getME(m,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
 
   vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
-  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
-  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
   G <- Matrix::bdiag(G1, G2)
+}
+
 
   Sigma <- Z %*% G %*% t(Z) + R 
 
@@ -338,25 +418,45 @@ lcr_res <- function(data) {
             data = df)
   
   N <- nrow(df)
-  subjects <- unique(df$subject)
-  nsubject <- length(subjects)
-  scenarios <- unique(df$scenario)
-  nscenario <- length(scenarios)
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
+  Z <- getME(m, "Z")
+  u <- getME(m, "b")
+  q <- getME(m, "q")
 
-  y <- df$y
-  X <- model.matrix(~attitude + gender, data = df)
-  beta <- fixef(m)
-  Z1 <- model.matrix(~scenario - 1, data = df)
-  Z2 <- model.matrix(~subject - 1, data = df)
-  Z <- cbind(Z1, Z2)
-  u <- c(ranef(m)$scenario[,1], ranef(m)$subject[,1])
-  q <- length(u)
+ nrfacs <- getME(m,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
 
   vc <- as.data.frame(VarCorr(m))
-  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
-  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
-  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
   G <- Matrix::bdiag(G1, G2)
+}
 
   Sigma <- Z %*% G %*% t(Z) + R 
   Sigma_inv <- solve(Sigma)
@@ -656,7 +756,7 @@ l11.1 <- lineup(true = v1_lin_fitted,
 
 ggsave(
   path = here::here("figures/lineup/linguistic/version1/"),
-  filename = "lin_v11_1.png",
+  filename = "lin_v11_10.png",
   plot = l11.1,
   device = "png",
   dpi = 300,
