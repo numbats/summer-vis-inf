@@ -22,6 +22,12 @@ library(patchwork)
 
 18 subjects. 10 days. Day 0 normal sleep. Rest of nights 3 hours of sleep. Reaction variable records average reaction time (ms) per day. 
 
+## Objectives of the residual diagnostics in this thesis 
+
+> checking presence of outlying observations based on marginal residuals as well as conditional residuals, and 
+
+> detecting normality of conditional error according to conditional residuals and confounded residuals.
+
 ```{r data}
 # Data and its summary
 data("sleepstudy")
