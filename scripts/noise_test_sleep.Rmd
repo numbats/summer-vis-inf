@@ -40,7 +40,7 @@ skimr::skim(sleepstudy)
 ```{r}
 sleepstudy %>%
   ggplot(aes(x=Days,y=Reaction,color=Subject))+
- # geom_point()+
+ #geom_point()+
   geom_smooth(method = "lm", se = FALSE)
 
 ggplot(sleepstudy, aes(Days, Reaction)) +
@@ -52,6 +52,7 @@ ggplot(sleepstudy, aes(Subject, Reaction)) +
   geom_boxplot()
 
 ```
+
 
 
 ## checking if random effects need to be correlated or independent 

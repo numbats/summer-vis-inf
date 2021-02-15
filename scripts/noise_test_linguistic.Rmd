@@ -1,0 +1,464 @@
+---
+title: "Example with linguistic data"
+output:
+  html_document:
+    code_folding: hide
+---
+
+Data is based on [this paper](https://arxiv.org/pdf/1308.5499.pdf). Also see [tutorial here](https://web.stanford.edu/class/psych252/section/Mixed_models_tutorial.html).
+
+```{r setup, include = FALSE}
+library(lme4)
+library(tidyverse)
+library(ggbeeswarm)
+library(colorspace)
+library(dplyr)
+library(nullabor)
+library(MASS)
+library(mvtnorm)
+library(patchwork)
+library(nlme)
+
+
+knitr::opts_chunk$set(message = FALSE,warning = FALSE#,
+  #cache.path = "cache/",
+  #cache = TRUE
+  )
+dataf <- read_csv(here::here("data/politeness_data.csv")) %>%
+  mutate(
+    scenario = fct_reorder(factor(scenario), frequency, function(x) {
+      mean(x, na.rm = TRUE)
+    }),
+    subject = fct_reorder(subject, frequency, function(x) {
+      mean(x, na.rm = TRUE)
+    })
+  )
+```
+
+The data contains `r nrow(df)` observations on the voice pitch (or frequency) from `r length(unique(df$subject))` subjects (3 females and 3 males) under `r length(unique(df$scenario))` scenarios with 2 attitudes (informal or polite). There is one missing value for subject `M4` for scenario 6 with polite attitude.
+
+We fixed the missing value by the mean value of the male with scenario 6 and polite attitude.
+
+```{r}
+dataf[39, ]$frequency <- round((dataf %>% filter(
+  gender == "M",
+  scenario == 6,
+  attitude == "pol"
+) %>%
+  summarise(mean(frequency, na.rm = T))), 1) %>% 
+  as.numeric()
+
+dataf <- dataf[order(dataf$subject), ]
+
+summary(dataf)
+
+unique(dataf$subject)
+unique(dataf$scenario)
+unique(dataf$attitude)
+
+```
+
+## About Data 
+
+The	difference	in	politeness	level	is	represented	in	 the	column	called	 “attitude”.		
+In	that	column, “pol”	stands	for	polite	and	“inf”	for	informal.	Sex	is	represented	as	
+“F”	 and	 “M”	 in	 the	 column	 “gender”.	 The	 dependent	 measure	 is	 “frequency”,	
+which	is	 the	 voice	 pitch	measured	in	Hertz	 (Hz). To	 remind	 you,	 higher	 values	
+mean	higher	pitch.
+
+The	interesting	random	effects	for	us	are	in	the	column	“subject”	and	“scenario”,	
+the	latter	being	the	name	of	the	item	column	(remember	the	different	scenarios	
+like	“asking	for	a	favor”?).
+
+Subjects : 6
+Scenario : 7
+Attitude : 2 - Polite and Informal
+
+```{r eda-plots}
+subject_f <- ggplot(dataf, aes(subject, frequency, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  scale_fill_discrete_qualitative() +   # females have a higher pitch 
+  ggtitle("No noise")
+
+attitude_f<- ggplot(dataf, aes(attitude, frequency, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  facet_grid(. ~ subject) +
+  scale_fill_discrete_qualitative() +   
+  ggtitle("No noise")
+
+gender_f <- ggplot(dataf, aes(gender, frequency)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +  # median is lower for polite in both males and females
+  facet_grid(. ~ attitude) +
+  scale_fill_discrete_qualitative()+   
+  ggtitle("No noise")
+
+scenario_f <- ggplot(dataf, aes(scenario, frequency)) +
+  geom_boxplot() +
+  geom_beeswarm(aes(color = gender)) +
+  scale_color_discrete_qualitative()+   
+  ggtitle("No noise")
+```
+
+# noise 
+
+ 
+
+```{r}
+
+noise <- function(level,random){
+df <- dataf
+set.seed(194253)
+colnames(df)[5] <- c("y")
+samp5 <- sample(21, random)
+f_pol <-
+  round(as.numeric(
+    df %>% filter(gender == "F", 
+                  attitude == "pol") %>% 
+      summarise(mean(y))
+  ), 1)
+repc_f_pol <- df %>%
+  filter(gender == "F", 
+         attitude == "pol")
+
+repc_f_pol[c(samp5), ]$y <- repc_f_pol[c(samp5), ]$y + f_pol * level
+
+set.seed(107623)
+samp6 <- sample(21, random)
+m_pol <-
+  round(as.numeric(
+    df %>% 
+      filter(gender == "M", 
+             attitude == "pol") %>% 
+      summarise(mean(y))
+  ), 1)
+repc_m_pol <- df %>% 
+  filter(gender == "M", 
+        attitude == "pol")
+
+repc_m_pol[c(samp6),]$y <- repc_m_pol[c(samp6),]$y + m_pol * level
+
+set.seed(274302)
+samp7 <- sample(21, random)
+
+m_inf <-
+  round(as.numeric(
+    df %>% 
+      filter(gender == "M", 
+      attitude == "inf") %>% 
+      summarise(mean(y))
+  ), 1)
+
+repc_m_inf <- df %>% 
+  filter(gender == "M", 
+         attitude == "inf")
+
+repc_m_inf[c(samp7), ]$y <- repc_m_inf[c(samp7), ]$y + m_inf * level
+
+set.seed(981234)
+samp8 <- sample(21, random)
+f_inf <-
+  round(as.numeric(
+    df %>% 
+      filter(gender == "F", 
+             attitude == "inf") %>% 
+      summarise(mean(y))
+  ), 1)
+repc_f_inf <- df %>% 
+  filter(gender == "F", 
+         attitude == "inf")
+repc_f_inf[c(samp8), ]$y <- repc_f_inf[c(samp8), ]$y + f_inf * level
+
+repc3 <- rbind(repc_f_inf, 
+               repc_f_pol, 
+               repc_m_inf, 
+               repc_m_pol)
+
+data <- repc3[order(repc3$subject),]
+return(data)
+}
+```
+
+both females and males for each of the attitude were taken and a noise of 20% of total mean value was injected into a frequency level under a random scenario.
+
+```{r}
+
+set1 <- noise(0.2,1)
+
+subject_set1 <- 
+  ggplot(set1, aes(subject, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  scale_fill_discrete_qualitative()  +
+  ggtitle("20%")  # females have a higher pitch 
+
+attitude_set1 <- ggplot(set1, aes(attitude, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  facet_grid(. ~ subject) +
+  scale_fill_discrete_qualitative()+
+  ggtitle("20%")
+
+gender_set1 <- ggplot(set1, aes(gender, y)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +  # median is lower for polite in both males and females
+  facet_grid(. ~ attitude) +
+  scale_fill_discrete_qualitative()+
+  ggtitle("20%")
+
+scenario_set1 <- ggplot(set1, aes(scenario, y)) +
+  geom_boxplot() +
+  geom_beeswarm(aes(color = gender)) +
+  scale_color_discrete_qualitative()+
+  ggtitle("20%")
+
+subject_f+subject_set1
+attitude_f+attitude_set1
+gender_f+gender_set1
+scenario_f+scenario_set1
+```
+
+```{r}
+set2 <- noise(0.25,1)
+
+subject_set2 <- 
+  ggplot(set2, aes(subject, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  scale_fill_discrete_qualitative()+
+  ggtitle("25%")# females have a higher pitch 
+
+attitude_set2 <- ggplot(set2, aes(attitude, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  facet_grid(. ~ subject) +
+  scale_fill_discrete_qualitative()+
+  ggtitle("25%")
+
+gender_set2 <- ggplot(set2, aes(gender, y)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +  # median is lower for polite in both males and females
+  facet_grid(. ~ attitude) +
+  scale_fill_discrete_qualitative()+
+  ggtitle("25%")
+
+scenario_set2 <- ggplot(set2, aes(scenario, y)) +
+  geom_boxplot() +
+  geom_beeswarm(aes(color = gender)) +
+  scale_color_discrete_qualitative()+
+  ggtitle("25%")
+
+subject_f+subject_set1+subject_set2
+attitude_f+attitude_set1+attitude_set2
+gender_f+gender_set1+gender_set2
+scenario_f+scenario_set1+scenario_set2
+
+summary(dataf)
+summary(set1)  # the average frequency increases. Median remains unchanged
+summary(set2)
+``` 
+
+
+```{r}
+set3 <- noise(0.3,1)
+
+subject_set3 <- 
+  ggplot(set3, aes(subject, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  scale_fill_discrete_qualitative() +
+  ggtitle("30%")   # females have a higher pitch 
+
+attitude_set3 <- ggplot(set3, aes(attitude, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  facet_grid(. ~ subject) +
+  scale_fill_discrete_qualitative()+
+  ggtitle("30%")
+
+gender_set3 <- ggplot(set3, aes(gender, y)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +  # median is lower for polite in both males and females
+  facet_grid(. ~ attitude) +
+  scale_fill_discrete_qualitative()+
+  ggtitle("30%")
+
+scenario_set3 <- ggplot(set3, aes(scenario, y)) +
+  geom_boxplot() +
+  geom_beeswarm(aes(color = gender)) +
+  scale_color_discrete_qualitative()+
+  ggtitle("30%")
+
+subject_f+subject_set1+subject_set2+subject_set3
+attitude_f+attitude_set1+attitude_set2+attitude_set3
+gender_f+gender_set1+gender_set2+gender_set3
+scenario_f+scenario_set1+scenario_set2+scenario_set3
+
+summary(dataf)
+summary(set1)  # the average frequency increases. Median remains unchanged
+summary(set2)
+summary(set3)
+```
+```{r}
+set4 <- noise(0.4,1)
+
+subject_set4 <- 
+  ggplot(set4, aes(subject, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  scale_fill_discrete_qualitative()  +
+  ggtitle("40%")
+  # females have a higher pitch 
+
+attitude_set4 <- ggplot(set4, aes(attitude, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  facet_grid(. ~ subject) +
+  scale_fill_discrete_qualitative() +
+  ggtitle("40%")
+
+gender_set4 <- ggplot(set4, aes(gender, y)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +  # median is lower for polite in both males and females
+  facet_grid(. ~ attitude) +
+  scale_fill_discrete_qualitative()+
+  ggtitle("40%")
+
+scenario_set4 <- ggplot(set4, aes(scenario, y)) +
+  geom_boxplot() +
+  geom_beeswarm(aes(color = gender)) +
+  scale_color_discrete_qualitative()+
+  ggtitle("40%")
+
+subject_f+subject_set1+subject_set2+subject_set3+subject_set4
+attitude_f+attitude_set1+attitude_set2+attitude_set3+attitude_set4
+gender_f+gender_set1+gender_set2+gender_set3+gender_set4
+scenario_f+scenario_set1+scenario_set2+scenario_set3+scenario_set4
+
+summary(dataf)
+summary(set1)  # the average frequency increases. Median remains unchanged
+summary(set2)
+summary(set3)
+summary(set4)
+```
+## number of scenarios changed
+
+```{r}
+set5 <- noise(0.2,2)
+
+subject_set5 <- 
+  ggplot(set5, aes(subject, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  scale_fill_discrete_qualitative()  +
+  ggtitle("2 scenarios")
+
+
+attitude_set5 <- ggplot(set5, aes(attitude, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  facet_grid(. ~ subject) +
+  scale_fill_discrete_qualitative() +
+  ggtitle("2 scenarios")
+
+gender_set5 <- ggplot(set5, aes(gender, y)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +  
+  facet_grid(. ~ attitude) +
+  scale_fill_discrete_qualitative()+
+  ggtitle("2 scenarios")
+
+scenario_set5 <- ggplot(set5, aes(scenario, y)) +
+  geom_boxplot() +
+  geom_beeswarm(aes(color = gender)) +
+  scale_color_discrete_qualitative()+
+  ggtitle("2 scenarios")
+
+```
+
+
+```{r}
+set6 <- noise(0.2,4)
+
+subject_set6 <- 
+  ggplot(set6, aes(subject, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  scale_fill_discrete_qualitative()  +
+  ggtitle("4 scenarios")
+
+
+attitude_set6 <- ggplot(set6, aes(attitude, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  facet_grid(. ~ subject) +
+  scale_fill_discrete_qualitative() +
+  ggtitle("4 scenarios")
+
+gender_set6 <- ggplot(set6, aes(gender, y)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +  
+  facet_grid(. ~ attitude) +
+  scale_fill_discrete_qualitative()+
+  ggtitle("4 scenarios")
+
+scenario_set6 <- ggplot(set6, aes(scenario, y)) +
+  geom_boxplot() +
+  geom_beeswarm(aes(color = gender)) +
+  scale_color_discrete_qualitative()+
+  ggtitle("4 scenarios")
+
+
+```
+
+```{r}
+set7 <- noise(0.2,6)
+
+subject_set7 <- 
+  ggplot(set7, aes(subject, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  scale_fill_discrete_qualitative()  +
+  ggtitle("6 scenarios")
+
+
+attitude_set7 <- ggplot(set7, aes(attitude, y, fill = gender)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +
+  facet_grid(. ~ subject) +
+  scale_fill_discrete_qualitative() +
+  ggtitle("6 scenarios")
+
+gender_set7 <- ggplot(set7, aes(gender, y)) +
+  geom_boxplot(width = 0.5) +
+  geom_beeswarm(color = "#383838") +  
+  facet_grid(. ~ attitude) +
+  scale_fill_discrete_qualitative()+
+  ggtitle("6 scenarios")
+
+scenario_set7 <- ggplot(set7, aes(scenario, y)) +
+  geom_boxplot() +
+  geom_beeswarm(aes(color = gender)) +
+  scale_color_discrete_qualitative()+
+  ggtitle("6 scenarios")
+
+
+```
+
+
+
+```{r}
+subject_f+subject_set5+subject_set6+subject_set7
+attitude_f+attitude_set5+attitude_set6+attitude_set7
+gender_f+gender_set5+gender_set6+gender_set7
+scenario_f+scenario_set5+scenario_set6+scenario_set7
+
+summary(dataf)
+summary(set5)  
+summary(set6)
+summary(set7)
+
+```
+
