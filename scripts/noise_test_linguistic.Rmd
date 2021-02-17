@@ -462,3 +462,203 @@ summary(set7)
 
 ```
 
+```{r v1mod}
+set4_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set4)
+```
+
+```{r v1-extract}
+set4_lin_fitted <- lin_extract_fitted_mod(set4_lin_mod, set4)
+set4_lin_lcr <- lin_extract_lcr_mod(set4_lin_mod, set4)
+
+
+```
+
+```{r v11-sim}
+set4_sim <- lin_sim(set4_lin_mod, set4, seed = 1234)
+```
+
+```{r fittednull-v11}
+set4_lin_sim_fitted <- std_res(set4_sim)
+```
+
+```{r lcrsimnull-v11}
+set4_lin_sim_lcr <- lcr_res(set4_sim)
+unique(set4_lin_sim_lcr$.n)
+```
+
+
+
+```{r}
+set4_1 <-  lineup(true = set4_lin_fitted,
+                samples = set4_lin_sim_fitted,
+                pos = 7) %>%
+  ggplot(aes(index,
+             resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+
+set4_2 <- lineup(true = set4_lin_fitted,
+                samples = set4_lin_sim_fitted,
+                pos = 7) %>%
+  ggplot(aes(index,
+             resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+set4_3 <- lineup(true = set4_lin_fitted,
+                samples = set4_lin_sim_fitted,
+                pos = 9) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+set4_4 <- lineup(true = set4_lin_lcr,
+                samples = set4_lin_sim_lcr,
+                pos = 9) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+set4_1
+set4_2
+set4_3
+set4_4
+
+```
+```{r}
+set7_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set7)
+
+set7_lin_fitted <- lin_extract_fitted_mod(set7_lin_mod, set7)
+set7_lin_lcr <- lin_extract_lcr_mod(set7_lin_mod, set7)
+
+
+
+set7_sim <- lin_sim(set7_lin_mod, set7, seed = 1234)
+
+set7_lin_sim_fitted <- std_res(set7_sim)
+set7_lin_sim_lcr <- lcr_res(set7_sim)
+```
+
+```{r}
+set7_1 <-  lineup(true = set7_lin_fitted,
+                samples = set7_lin_sim_fitted,
+                pos = 7) %>%
+  ggplot(aes(index,
+             resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+
+set7_2 <- lineup(true = set7_lin_fitted,
+                samples = set7_lin_sim_fitted,
+                pos = 7) %>%
+  ggplot(aes(index,
+             resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+set7_3 <- lineup(true = set7_lin_fitted,
+                samples = set7_lin_sim_fitted,
+                pos = 9) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+set7_4 <- lineup(true = set7_lin_lcr,
+                samples = set7_lin_sim_lcr,
+                pos = 9) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+set7_1
+set7_2
+set7_3
+set7_4
+
+```
