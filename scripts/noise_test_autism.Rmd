@@ -1,0 +1,1082 @@
+---
+title: "case6 noise test"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(HLMdiag)
+library(lme4)
+library(nlme)
+library(ggplot2)
+library(nullabor)
+library(ggforce)
+library(dplyr)
+library(stringr)
+library(mvtnorm)
+library(MASS)
+library(patchwork)
+```
+
+Autism data has 155 children between the ages of 2 and 13 who were diagnosed with either autism spectrum disorder or non-spectrum developmental delays at age 2.
+
+It contains 604 observations with 7 variables:
+
+- `childid`: Child ID
+- `sicdegp`: Sequenced Inventory of Communication Development group (an assessment of expressive language development) with levels low, mod, and high  ## language used 
+- `age2`: Age (in years) centered arond age 2 (age at diagnosis)
+- `vsae`: Vineland Socialization Age Equivalent ## social skill
+- `gender`: Child's gender, female and male
+- `race`: Child's race, white and non-white
+- `bestest2`: Diagnosis at age 2, autism and pdd
+
+```{r}
+data(autism)
+str(autism)
+summary(autism)
+length(unique(autism$childid))
+
+
+```
+
+- subject-level variables:
++ `chilidid`
++ `sicdegp`
++ `gender`
++ `race`
++ `bestest2`
+
+```{r}
+agen <- ggplot(autism, aes(age2, log10(vsae))) +
+  geom_point() +
+  facet_wrap_paginate(~childid, nrow = 5, ncol = 5, page = 1) +
+  geom_smooth(method = "lm", se = F)+
+  ggtitle("No noise")
+```
+
+- `age2` has the relative positive relationship with `vsae` except childid 18
+- It seems to have the similar intercept but with different slopes.
+
+```{r}
+genn <- ggplot(autism, aes(gender, vsae)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("No noise")
+```
+
+there is no much difference between male and female with respective to `vsae`.
+
+```{r}
+racegenn <- ggplot(autism, aes(interaction(gender, race), vsae)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("No noise")
+```
+
+```{r}
+sicn <- ggplot(autism, aes(sicdegp, vsae, fill = race)) +
+  geom_boxplot() +
+  scale_y_log10()
+bestn <- ggplot(autism, aes(bestest2, vsae)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("No noise")
+```
+
+At this stage, the variables, interaction of `gender` and `race`, `sicdegp`, `age2` and `bestest2` include in the model as matrix of fixed effect. 
+
+From the `age2` versus `vsae` plot, the intercept seems to be same while the slope is different for each different children. Then we treat the random effect with random slope. As Adam mentioned, the model for LMM needs the quadratic random slope.
+
+```{r model}
+colnames(autism)[4] <- c("y")
+
+
+```
+
+
+## Noise 
+
+- we add 20% of the total median response values to roughly 20% of
+observations at random.
+
+```{r}
+
+median_noise <- function(noise){
+
+set.seed(2639)
+ind <- sample(604, 120, replace = F)
+autism_repc3 <- autism
+autism_repc3[ind, ]$y <- autism_repc3[ind, ]$y + median(autism_repc3$y) * noise
+
+return (autism_repc3)
+}
+
+
+```
+
+```{r fittedfn}
+autism_extract_fitted_mod <- function(mod, data) {
+ 
+ 
+  # n <- getME(mod, "n")
+   N <- nrow(data)
+
+
+  y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- getME(mod, "beta")
+  Z <- getME(mod, "Z")
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(mod))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+
+
+ Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(mod) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(mod) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted_df <- data %>%
+    dplyr::mutate(
+      fitted = as.vector(X %*% beta),
+      resm = y - fitted,
+      resc = as.vector(y - fitted - Z %*% u),
+      index = 1:n()
+    ) %>%
+    mutate(
+      resm_std = resm / sqrt(diag(varMargRes)[index]),
+      resc_std = resc / sqrt(diag(varCondRes)[index])
+    ) %>%
+    ungroup()
+}
+```
+
+```{r lcrfn}
+autism_extract_lcr_mod <- function(mod, data) {
+  
+
+  
+  N <- nrow(data)
+ y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- getME(mod, "beta")
+  Z <- getME(mod, "Z")
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(mod))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+
+  Sigma <- Z %*% G %*% t(Z) + R
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(mod) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(mod) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- as.vector(y - fitted - Z %*% u)
+  index <- 1:nrow(data)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N-p)])))) %*% t(auxqn$vectors[1:N,1:(N-p)]) %*% solve(expm::sqrtm(R[1:N,1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+
+  resmcp_sl <- tibble::tibble(resmcp)
+
+  return(resmcp_sl)
+}
+```
+
+```{r simulatefn}
+autism_sim <- function(mod, data, nsim = 19, seed, std = FALSE) {
+  fit_sim <- simulate(mod, nsim = nsim, seed = seed, std = std)
+  fit_refit <- lapply(fit_sim, refit, object = mod)
+  fit_simy <- lapply(fit_refit, function(x) getME(x, "y"))
+  fit_simy_y <- do.call("cbind", fit_simy)
+  fit_simy_y <- reshape2::melt(fit_simy_y)[-1]
+  names(fit_simy_y) <- c(".n", "y")
+  fit_simy_y$.n <- as.numeric(str_extract(fit_simy_y$.n, "\\d+"))
+  fit_simy_y$age2 <- rep(data$age2, 19)
+  fit_simy_y$sicdegp <- rep(data$sicdegp, 19)
+  fit_simy_y$gender <- rep(data$gender, 19)
+  fit_simy_y$race <- rep(data$race, 19)
+  fit_simy_y$bestest2 <- rep(data$bestest2, 19)
+  fit_simy_y$childid <- rep(data$childid, 19)
+  return(fit_simy_y)
+}
+```
+
+
+```{r}
+std_res <- function(data) {
+  purrr::map_dfr(1:19, function(i) {
+  df <- data %>% filter(.n == i)
+  m <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = df)
+  
+  N <- nrow(df)
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
+  Z <- getME(m, "Z")
+  u <- getME(m, "b")
+  q <- getME(m, "q")
+
+ nrfacs <- getME(m,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(m))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+}
+```
+
+
+```{r}
+lcr_res <- function(data) {
+  
+  purrr::map_dfr(1:19, function(i) {
+  df <- data %>% filter(.n == i)
+ m <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = df)
+
+  N <- nrow(df)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
+  Z <- getME(m, "Z")
+  u <- getME(m, "b")
+  q <- getME(m, "q")
+
+ nrfacs <- getME(m,"n_rfacs")
+ num <- 0 
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(m))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half),
+    symmetric = T,
+    only.values = FALSE
+  )
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var_resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var_resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+  
+}
+```
+
+```{r}
+obs_noise <- function(noise){
+
+set.seed(2639)
+ind <- sample(604,noise*(nrow(autism)), replace = F)
+autism_repc3 <- autism
+autism_repc3[ind, ]$y <- autism_repc3[ind, ]$y + median(autism_repc3$y) * 0.2
+
+return (autism_repc3)
+}
+
+
+
+```
+
+```{r}
+autism_mod <- lmer(y ~ age2 + sicdegp + gender:race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism)
+autism_fitted <- autism_extract_fitted_mod(autism_mod, autism)
+autism_lcr <- autism_extract_lcr_mod(autism_mod, autism)
+```
+
+# Data plots
+
+```{r}
+ a0 <- ggplot(autism_s1_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()
+
+ b0 <- ggplot(autism_s1_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+c0 <- ggplot(autism_s1_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d0 <- ggplot(autism_s1_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+
+### set 1
+
+```{r}
+autism_set1 <- median_noise(0.2)
+
+age1 <- ggplot(autism_set1, aes(age2, log10(y))) +
+  geom_point() +
+  facet_wrap_paginate(~childid, nrow = 5, ncol = 5, page = 1) +
+  geom_smooth(method = "lm", se = F)+
+  ggtitle("20%")
+
+gender1 <- ggplot(autism_set1, aes(gender, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("20%")
+
+racegen1 <- ggplot(autism_set1, aes(interaction(gender, race), y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("20%")
+
+sic1 <- ggplot(autism_set1, aes(sicdegp, y, fill = race)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("20%")
+
+best1 <- ggplot(autism_set1, aes(bestest2, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("20%")
+
+
+```
+
+
+```{r}
+autism_s1_mod <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism_set1)
+autism_s1_fitted <- autism_extract_fitted_mod(autism_s1_mod, autism_set1)
+autism_s1_lcr <- autism_extract_lcr_mod(autism_s1_mod, autism_set1)
+```
+
+# Data plots
+
+```{r}
+ a1 <- ggplot(autism_s1_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()
+
+ b1 <- ggplot(autism_s1_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+c1 <- ggplot(autism_s1_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d1 <- ggplot(autism_s1_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+## set 2
+
+```{r}
+
+autism_set2 <- median_noise(0.25)
+
+age2 <- ggplot(autism_set2, aes(age2, log10(y))) +
+  geom_point() +
+  facet_wrap_paginate(~childid, nrow = 5, ncol = 5, page = 1) +
+  geom_smooth(method = "lm", se = F)+
+  ggtitle("25%")
+
+gender2 <- ggplot(autism_set2, aes(gender, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("25%")
+
+racegen2 <- ggplot(autism_set2, aes(interaction(gender, race), y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("25%")
+
+sic2 <- ggplot(autism_set2, aes(sicdegp, y, fill = race)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("25%")
+
+best2 <- ggplot(autism_set2, aes(bestest2, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("25%")
+
+
+
+```
+
+```{r}
+autism_s2_mod <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism_set2)
+autism_s2_fitted <- autism_extract_fitted_mod(autism_s2_mod, autism_set2)
+autism_s2_lcr <- autism_extract_lcr_mod(autism_s2_mod, autism_set2)
+```
+
+# Data plots
+
+```{r}
+a2 <- ggplot(autism_s2_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()
+
+ b2<- ggplot(autism_s2_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+
+c2 <- ggplot(autism_s2_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d2 <- ggplot(autism_s2_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+
+```
+
+
+## set 3
+
+
+
+```{r}
+
+autism_set3 <- median_noise(0.3)
+
+age3 <- ggplot(autism_set3, aes(age2, log10(y))) +
+  geom_point() +
+  facet_wrap_paginate(~childid, nrow = 5, ncol = 5, page = 1) +
+  geom_smooth(method = "lm", se = F)+
+  ggtitle("30%")
+
+gender3 <- ggplot(autism_set3, aes(gender, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("30%")
+
+racegen3 <- ggplot(autism_set3, aes(interaction(gender, race), y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("30%")
+
+sic3 <- ggplot(autism_set3, aes(sicdegp, y, fill = race)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("30%")
+
+best3 <- ggplot(autism_set3, aes(bestest2, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("30%")
+
+
+
+```
+
+```{r}
+autism_s3_mod <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism_set3)
+autism_s3_fitted <- autism_extract_fitted_mod(autism_s3_mod, autism_set3)
+autism_s3_lcr <- autism_extract_lcr_mod(autism_s3_mod, autism_set3)
+```
+
+# Data plots
+
+```{r}
+a3 <- ggplot(autism_s3_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()
+
+ b3<- ggplot(autism_s3_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+
+c3 <- ggplot(autism_s3_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d3 <- ggplot(autism_s3_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+```
+
+# set 4
+
+
+```{r}
+
+autism_set4 <- median_noise(0.35)
+
+age4 <- ggplot(autism_set4, aes(age2, log10(y))) +
+  geom_point() +
+  facet_wrap_paginate(~childid, nrow = 5, ncol = 5, page = 1) +
+  geom_smooth(method = "lm", se = F)+
+  ggtitle("35%")
+
+gender4 <- ggplot(autism_set4, aes(gender, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("35%")
+
+racegen4 <- ggplot(autism_set4, aes(interaction(gender, race), y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("35%")
+
+sic4 <- ggplot(autism_set4, aes(sicdegp, y, fill = race)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("35%")
+
+best4 <- ggplot(autism_set4, aes(bestest2, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("35%")
+
+
+
+```
+
+```{r}
+autism_s4_mod <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism_set4)
+autism_s4_fitted <- autism_extract_fitted_mod(autism_s4_mod, autism_set4)
+autism_s4_lcr <- autism_extract_lcr_mod(autism_s4_mod, autism_set4)
+```
+
+# Data plots
+
+```{r}
+a4 <- ggplot(autism_s4_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()
+
+b4<- ggplot(autism_s4_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+
+c4 <- ggplot(autism_s4_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d4 <- ggplot(autism_s4_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+
+```
+
+### set 5 : Percentage of observations changed
+
+```{r}
+autism_set5 <- obs_noise(0.25)
+
+age5 <- ggplot(autism_set5, aes(age2, log10(y))) +
+  geom_point() +
+  facet_wrap_paginate(~childid, nrow = 5, ncol = 5, page = 1) +
+  geom_smooth(method = "lm", se = F)+
+  ggtitle("20%")
+
+gender5 <- ggplot(autism_set5, aes(gender, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("20%")
+
+racegen5 <- ggplot(autism_set5, aes(interaction(gender, race), y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("20%")
+
+sic5 <- ggplot(autism_set5, aes(sicdegp, y, fill = race)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("20%")
+
+best5 <- ggplot(autism_set5, aes(bestest2, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("20%")
+
+
+```
+
+
+```{r}
+autism_s5_mod <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism_set5)
+autism_s5_fitted <- autism_extract_fitted_mod(autism_s5_mod, autism_set5)
+autism_s5_lcr <- autism_extract_lcr_mod(autism_s5_mod, autism_set5)
+```
+
+# Data plots
+
+```{r}
+ a5 <- ggplot(autism_s5_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()
+
+ b5 <- ggplot(autism_s5_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+c5 <- ggplot(autism_s5_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d5 <- ggplot(autism_s5_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+## set 6
+
+```{r}
+
+autism_set6 <- median_noise(0.3)
+
+age6 <- ggplot(autism_set6, aes(age2, log10(y))) +
+  geom_point() +
+  facet_wrap_paginate(~childid, nrow = 5, ncol = 5, page = 1) +
+  geom_smooth(method = "lm", se = F)+
+  ggtitle("30%")
+
+gender6 <- ggplot(autism_set6, aes(gender, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("30%")
+
+racegen6 <- ggplot(autism_set6, aes(interaction(gender, race), y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("30%")
+
+sic6 <- ggplot(autism_set6, aes(sicdegp, y, fill = race)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("30%")
+
+best6 <- ggplot(autism_set6, aes(bestest2, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("30%")
+
+
+
+```
+
+```{r}
+autism_s6_mod <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism_set6)
+autism_s6_fitted <- autism_extract_fitted_mod(autism_s6_mod, autism_set6)
+autism_s6_lcr <- autism_extract_lcr_mod(autism_s6_mod, autism_set6)
+```
+
+# Data plots
+
+```{r}
+a6 <- ggplot(autism_s6_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()
+
+ b6<- ggplot(autism_s6_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+
+c6 <- ggplot(autism_s6_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d6<- ggplot(autism_s6_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+
+```
+
+
+## set 3
+
+
+
+```{r}
+
+autism_set7 <- median_noise(0.35)
+
+age7 <- ggplot(autism_set7, aes(age2, log10(y))) +
+  geom_point() +
+  facet_wrap_paginate(~childid, nrow = 5, ncol = 5, page = 1) +
+  geom_smooth(method = "lm", se = F)+
+  ggtitle("35%")
+
+gender7 <- ggplot(autism_set7, aes(gender, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("35%")
+
+racegen7 <- ggplot(autism_set7, aes(interaction(gender, race), y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("35%")
+
+sic7<- ggplot(autism_set7, aes(sicdegp, y, fill = race)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("35%")
+
+best7 <- ggplot(autism_set7, aes(bestest2, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("35%")
+
+
+
+```
+
+```{r}
+autism_s7_mod <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism_set7)
+autism_s7_fitted <- autism_extract_fitted_mod(autism_s7_mod, autism_set7)
+autism_s7_lcr <- autism_extract_lcr_mod(autism_s7_mod, autism_set7)
+```
+
+# Data plots
+
+```{r}
+a7 <- ggplot(autism_s7_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()
+
+ b7<- ggplot(autism_s7_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+
+c7 <- ggplot(autism_s7_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d7 <- ggplot(autism_s7_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+```
+
+# set 4
+
+
+```{r}
+
+autism_set8 <- median_noise(0.4)
+
+age8 <- ggplot(autism_set8, aes(age2, log10(y))) +
+  geom_point() +
+  facet_wrap_paginate(~childid, nrow = 5, ncol = 5, page = 1) +
+  geom_smooth(method = "lm", se = F)+
+  ggtitle("40%")
+
+gender8 <- ggplot(autism_set8, aes(gender, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("40%")
+
+racegen8 <- ggplot(autism_set8, aes(interaction(gender, race), y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("40%")
+
+sic8 <- ggplot(autism_set8, aes(sicdegp, y, fill = race)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("40%")
+
+best8 <- ggplot(autism_set8, aes(bestest2, y)) +
+  geom_boxplot() +
+  scale_y_log10()+
+  ggtitle("40%")
+
+
+
+```
+
+```{r}
+autism_s8_mod <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism_set8)
+autism_s8_fitted <- autism_extract_fitted_mod(autism_s8_mod, autism_set8)
+autism_s8_lcr <- autism_extract_lcr_mod(autism_s8_mod, autism_set8)
+```
+
+# Data plots
+
+```{r}
+a8 <- ggplot(autism_s8_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()+
+  
+
+b8<- ggplot(autism_s8_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+
+c8 <- ggplot(autism_s8_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d8 <- ggplot(autism_s8_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+
+
+```{r}
+# change in median 
+
+age1+age2+age3+age4
+racegen1+racegen2+racegen3+racegen4
+gender1+gender2+gender3+gender4
+sic1+sic2+sic3+sic4
+best1+best2+best3+best4
+
+```
+
+
+```{r}
+# change in observations
+
+age5+age6+age7+age8
+racegen5+racegen6+racegen7+racegen8
+gender5+gender6+gender7+gender8
+sic5+sic6+sic7+sic8
+best5+best6+best7+best8
+
+```
+
+
+
+```{r}
+
+#change in median 
+a0+a1+ggtitle("20%")+
+  a2+ggtitle("25%")+
+  a3+ggtitle("30%")+
+  a4+ggtitle("35%")
+b0+b1+ggtitle("20%")+
+  b2+ggtitle("25%")+
+  b3+ggtitle("30%")+
+  b4+ggtitle("35%")
+c0+c1+ggtitle("20%")+
+  c2+ggtitle("25%")+
+  c3+ggtitle("30%")+
+  c4+ggtitle("35%")
+d0+d1+ggtitle("20%")+
+ d2+ggtitle("25%")+
+  d3+ggtitle("30%")+
+  d4+ggtitle("35%")
+```
+
+```{r}
+#change in observations
+a0+a5+ggtitle("25%")+
+  a6+ggtitle("30%")+
+  a7+ggtitle("35%")+
+  a8+ggtitle("40%")
+b0+b5+ggtitle("25%")+
+  b6+ggtitle("30%")+
+  b7+ggtitle("35%")+
+  b8+ggtitle("40%")
+c0+c5+ggtitle("25%")+
+  c6+ggtitle("30%")+
+  c7+ggtitle("35%")+
+  c8+ggtitle("40%")
+d0+ylim(-6,7)+
+  d5+ggtitle("25%")+ylim(-6,7)+
+  d6+ggtitle("30%")+ylim(-6,7)+
+  d7+ggtitle("35%")+ylim(-6,7)+
+  d8+ggtitle("40%")+ylim(-6,7)
+```
+
+

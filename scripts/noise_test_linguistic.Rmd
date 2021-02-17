@@ -75,6 +75,7 @@ Scenario : 7
 Attitude : 2 - Polite and Informal
 
 ```{r eda-plots}
+
 subject_f <- ggplot(dataf, aes(subject, frequency, fill = gender)) +
   geom_boxplot(width = 0.5) +
   geom_beeswarm(color = "#383838") +
@@ -102,9 +103,456 @@ scenario_f <- ggplot(dataf, aes(scenario, frequency)) +
   ggtitle("No noise")
 ```
 
-# noise 
+```{r fitfn}
+lin_extract_fitted_mod <- function(mod, data) {
+  N <- nrow(data)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+  
+ # subjects <- unique(data$Subject)
+  #nsubjects <- length(subjects)
 
+  #y <- data$y
+  #X <- getME(mod, "X") # fixed effects model matrix
+  #beta <- fixef(mod) # fixed effects estimate
+  #Z <- getME(mod, "Z") # random effects matrix
+  #u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2]) # extracts the modes of the random effects
+  #q <- length(u)
+  
+  y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- getME(mod, "beta")
+  Z <- getME(mod, "Z")
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
  
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])# covariance matrix of random effects
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(mod))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+  
+
+  Sigma <- Z %*% G %*% t(Z) + R # covariance matrix of marginal distribution of observations
+
+  Sigma_inv <- solve(Sigma) # inverse of sigma
+
+  # variance of marginal residual = sigma-X(X^t * sigma^-1 * X)*X^t
+  # variance of conditional residual = R*((sigma^-1)-(sigma^-1)*X*(X^t*sigma^-1*X)^-1*X^t*sigma^-1)*R
+
+
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(mod) %*% t(X) %*% Sigma_inv # (sigma^-1)-(sigma^-1)*X*(X^t*sigma^-1*X)^-1*X^t*sigma^-1
+
+  varMargRes <- Sigma - X %*% vcov(mod) %*% t(X) # variance of marginal residual
+  varCondRes <- R %*% P %*% R # variance of conditional residual
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G # random effects variance
+
+  # fitted or estimated marginal mean = X*Beta
+
+  fitted_df <- data %>%
+    dplyr::mutate(
+      fitted = as.vector(X %*% beta),
+      resm = y - fitted,
+      resc = as.vector(y - fitted - Z %*% u),
+      index = 1:n()
+    ) %>%
+    mutate(
+      resm_std = resm / sqrt(diag(varMargRes)[index]), # standardized marginal residual
+      resc_std = resc / sqrt(diag(varCondRes)[index]) # standardized conditional residual
+    ) %>%
+    ungroup()
+
+  return(fitted_df)
+}
+```
+
+```{r unitfn}
+lin_extract_unit_mod <- function(mod, data){
+  N <- nrow(data)
+  subjects <- unique(data$subject)
+  nsubject <- length(subjects)
+  scenarios <- unique(data$scenario)
+  nscenario <- length(scenarios)
+
+  y <- data$y
+  X <- model.matrix(~attitude + gender, data = data)
+  beta <- fixef(mod)
+  Z1 <- model.matrix(~scenario - 1, data = data)
+  Z2 <- model.matrix(~subject - 1, data = data)
+  Z <- cbind(Z1, Z2)  
+  u <- c(ranef(mod)$scenario[,1], ranef(mod)$subject[,1])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(mod))
+  R <- vc$vcov[vc$grp == 'Residual'] * diag(N)
+  G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+  G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% solve(t(X) %*% Sigma_inv %*% X) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  fitted <-  as.vector(X %*% beta)
+  resm <-  y - fitted
+  resc <-  y - fitted - as.vector(Z %*% u)
+  
+  unit_df <- expand_grid(subjects, scenarios) %>% 
+    dplyr::mutate(Vi = map2_dbl(subjects, scenarios, ~{
+                        ind <- data %>% 
+                          dplyr::mutate(index = 1:n()) %>% 
+                          filter(subject==.x,
+                                 scenario==.y) %>% 
+                          pull(index)
+                         mi <- length(ind)
+                        # standardised marginal residual
+                        Ei <- solve(expm::sqrtm(varMargRes[ind, ind])) %*% resm[ind]
+                        v1 <- (diag(mi)- Ei %*% t(Ei))
+                        sqrt(sum(diag(v1 %*% t(v1)))) / mi
+                      }),
+         Mi = as.vector(t(u) %*% solve(varU) %*% u),
+         index = 1:n()
+         )
+  
+  return(unit_df)
+}
+```
+
+```{r}
+lin_extract_lcr_mod <- function(mod, data){
+   #n <- getME(mod, "n")
+  N <- nrow(data)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+ # y <- data$y
+  #X <- getME(mod, "X")
+  #beta <- fixef(mod)
+  #Z <- getME(mod, "Z")
+  #u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2])
+  #q <- length(u)
+  
+  
+  y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- getME(mod, "beta")
+  Z <- getME(mod, "Z")
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(mod))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+  Sigma <- Z %*% G %*% t(Z) + R
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(mod) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(mod) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- as.vector(y - fitted - Z %*% u)
+  index <- 1:nrow(data)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+
+  # standardized least confounded residual = c^T * e / sqrt(CRQRC^t)
+
+  R_half <- expm::sqrtm(R)
+
+  # singer et al calculation for least confounded residual
+  auxqn <- eigen((R_half %*% P %*% R_half),
+    symmetric = T,
+    only.values = FALSE
+  )
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var_resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var_resmcp))
+
+  resmcp_sl <- tibble::tibble(resmcp)
+
+  return(resmcp_sl)
+}
+```
+
+```{r simulatefn}
+lin_sim <- function(mod, data, nsim = 19, seed, std = FALSE){
+  fit_sim <- simulate(mod, nsim = nsim, seed = seed)
+  fit_refit <- lapply(fit_sim, refit, object = mod)
+  fit_simy <- lapply(fit_refit, function(x) getME(x, 'y'))
+  fit_simy_y <- do.call("cbind", fit_simy)
+  fit_simy_y <- reshape2::melt(fit_simy_y)[-1]
+  names(fit_simy_y) <- c(".n", "y")
+  fit_simy_y$.n <- as.numeric(str_extract(fit_simy_y$.n, "\\d+"))
+  fit_simy_y$attitude <- rep(data$attitude, 19)
+  fit_simy_y$gender <- rep(data$gender, 19)
+  fit_simy_y$subject <- rep(data$subject, 19)
+  fit_simy_y$scenario <- rep(data$scenario, 19)
+  return(fit_simy_y)
+}
+```
+
+
+```{r model}
+colnames(dataf)[5] <- c("y")
+#df <- na.omit(df)
+fit <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = dataf)
+
+lin_fitted <- lin_extract_fitted_mod(fit, dataf)
+lin_unit <- lin_extract_unit_mod(fit, dataf)
+lin_lcr <- lin_extract_lcr_mod(fit, dataf)
+```
+
+
+```{r}
+std_res <- function(data) {
+  purrr::map_dfr(1:19, function(i) {
+  df <- data %>% filter(.n == i)
+  m <- lmer(y ~ 1 +attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+  
+  N <- nrow(df)
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
+  Z <- getME(m, "Z")
+  u <- getME(m, "b")
+  q <- getME(m, "q")
+
+ nrfacs <- getME(m,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(m))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+
+
+  Sigma <- Z %*% G %*% t(Z) + R 
+
+  Sigma_inv <- solve(Sigma)
+
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X) 
+  varCondRes <- R %*% P %*% R  
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+  
+  fitted = as.vector(X %*% beta)
+  resm = y - fitted
+  resc = y - fitted - as.vector(Z %*% u)
+  index = 1:nrow(df)
+  resm_std = resm / sqrt(diag(varMargRes)[index])
+  resc_std = resc / sqrt(diag(varCondRes)[index])
+  
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+}
+```
+
+
+```{r null-lcrres}
+# function returns least conditional residual after 19 simulations
+lcr_res <- function(data) {
+  
+  purrr::map_dfr(1:19, function(i) {
+  df <- data %>% filter(.n == i)
+  m <- lmer(y ~ 1 +attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = df)
+
+  N <- nrow(df)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
+  Z <- getME(m, "Z")
+  u <- getME(m, "b")
+  q <- getME(m, "q")
+
+ nrfacs <- getME(m,"n_rfacs")
+ num <- 0 
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(m))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half),
+    symmetric = T,
+    only.values = FALSE
+  )
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var_resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var_resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+  
+}
+```
+
+
+
+# noise 
 
 ```{r}
 
@@ -214,10 +662,7 @@ scenario_set1 <- ggplot(set1, aes(scenario, y)) +
   scale_color_discrete_qualitative()+
   ggtitle("20%")
 
-subject_f+subject_set1
-attitude_f+attitude_set1
-gender_f+gender_set1
-scenario_f+scenario_set1
+
 ```
 
 ```{r}
@@ -250,10 +695,6 @@ scenario_set2 <- ggplot(set2, aes(scenario, y)) +
   scale_color_discrete_qualitative()+
   ggtitle("25%")
 
-subject_f+subject_set1+subject_set2
-attitude_f+attitude_set1+attitude_set2
-gender_f+gender_set1+gender_set2
-scenario_f+scenario_set1+scenario_set2
 
 summary(dataf)
 summary(set1)  # the average frequency increases. Median remains unchanged
@@ -291,16 +732,14 @@ scenario_set3 <- ggplot(set3, aes(scenario, y)) +
   scale_color_discrete_qualitative()+
   ggtitle("30%")
 
-subject_f+subject_set1+subject_set2+subject_set3
-attitude_f+attitude_set1+attitude_set2+attitude_set3
-gender_f+gender_set1+gender_set2+gender_set3
-scenario_f+scenario_set1+scenario_set2+scenario_set3
+
 
 summary(dataf)
 summary(set1)  # the average frequency increases. Median remains unchanged
 summary(set2)
 summary(set3)
 ```
+
 ```{r}
 set4 <- noise(0.4,1)
 
@@ -332,17 +771,224 @@ scenario_set4 <- ggplot(set4, aes(scenario, y)) +
   scale_color_discrete_qualitative()+
   ggtitle("40%")
 
-subject_f+subject_set1+subject_set2+subject_set3+subject_set4
-attitude_f+attitude_set1+attitude_set2+attitude_set3+attitude_set4
-gender_f+gender_set1+gender_set2+gender_set3+gender_set4
-scenario_f+scenario_set1+scenario_set2+scenario_set3+scenario_set4
 
-summary(dataf)
-summary(set1)  # the average frequency increases. Median remains unchanged
-summary(set2)
-summary(set3)
-summary(set4)
 ```
+
+## data plots
+
+```{r}
+stdm0 <- ggplot(lin_fitted, aes(index, 
+                          resm_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+stdc0 <- ggplot(lin_fitted, aes(index, 
+                          resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+
+stcq0 <- ggplot(lin_fitted, 
+       aes(sample = resc_std)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+stdlcr0 <- ggplot(lin_lcr, 
+       aes(sample = resmcp)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+```
+
+## set 1
+
+```{r}
+set1_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set1)
+```
+
+```{r}
+set1_lin_fitted <- lin_extract_fitted_mod(set1_lin_mod, set1)
+set1_lin_lcr <- lin_extract_lcr_mod(set1_lin_mod, set1)
+```
+
+```{r}
+stdm1 <- ggplot(set1_lin_fitted, aes(index, 
+                          resm_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+stdc1 <- ggplot(set1_lin_fitted, aes(index, 
+                          resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+
+stcq1 <- ggplot(set1_lin_fitted, 
+       aes(sample = resc_std)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+stdlcr1 <- ggplot(set1_lin_lcr, 
+       aes(sample = resmcp)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+
+
+```
+
+
+## set 2
+
+```{r}
+set2_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set2)
+```
+
+```{r}
+set2_lin_fitted <- lin_extract_fitted_mod(set2_lin_mod, set2)
+set2_lin_lcr <- lin_extract_lcr_mod(set2_lin_mod, set2)
+```
+
+```{r}
+stdm2 <- ggplot(set2_lin_fitted, aes(index, 
+                          resm_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+stdc2 <- ggplot(set2_lin_fitted, aes(index, 
+                          resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+
+stcq2 <- ggplot(set2_lin_fitted, 
+       aes(sample = resc_std)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+stdlcr2 <- ggplot(set2_lin_lcr, 
+       aes(sample = resmcp)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+```
+
+
+## set 3
+
+```{r}
+set3_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set3)
+```
+
+```{r}
+set3_lin_fitted <- lin_extract_fitted_mod(set3_lin_mod, set3)
+set3_lin_lcr <- lin_extract_lcr_mod(set3_lin_mod, set3)
+```
+
+```{r}
+stdm3 <- ggplot(set3_lin_fitted, aes(index, 
+                          resm_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+stdc3 <- ggplot(set3_lin_fitted, aes(index, 
+                          resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+
+stcq3 <- ggplot(set3_lin_fitted, 
+       aes(sample = resc_std)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+stdlcr3 <- ggplot(set3_lin_lcr, 
+       aes(sample = resmcp)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+
+
+```
+
+
+## set 4
+
+```{r}
+set4_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set4)
+```
+
+```{r}
+set4_lin_fitted <- lin_extract_fitted_mod(set4_lin_mod, set4)
+set4_lin_lcr <- lin_extract_lcr_mod(set4_lin_mod, set4)
+```
+
+```{r}
+stdm4 <- ggplot(set4_lin_fitted, aes(index, 
+                          resm_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+stdc4 <- ggplot(set4_lin_fitted, aes(index, 
+                          resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+
+stcq4 <- ggplot(set4_lin_fitted, 
+       aes(sample = resc_std)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+stdlcr4 <- ggplot(set4_lin_lcr, 
+       aes(sample = resmcp)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+
+
+```
+
+
+
+
 ## number of scenarios changed
 
 ```{r}
@@ -449,7 +1095,176 @@ scenario_set7 <- ggplot(set7, aes(scenario, y)) +
 
 
 
+## set 5
+
 ```{r}
+set5_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set5)
+```
+
+```{r}
+set5_lin_fitted <- lin_extract_fitted_mod(set5_lin_mod, set5)
+set5_lin_lcr <- lin_extract_lcr_mod(set5_lin_mod, set5)
+```
+
+```{r}
+stdm5 <- ggplot(set1_lin_fitted, aes(index, 
+                          resm_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+stdc5 <- ggplot(set1_lin_fitted, aes(index, 
+                          resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+
+stcq5 <- ggplot(set1_lin_fitted, 
+       aes(sample = resc_std)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+stdlcr5 <- ggplot(set1_lin_lcr, 
+       aes(sample = resmcp)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+
+
+```
+
+
+## set 6
+
+```{r}
+set6_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set6)
+```
+
+```{r}
+set6_lin_fitted <- lin_extract_fitted_mod(set6_lin_mod, set6)
+set6_lin_lcr <- lin_extract_lcr_mod(set6_lin_mod, set6)
+```
+
+```{r}
+stdm6 <- ggplot(set6_lin_fitted, aes(index, 
+                          resm_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+stdc6 <- ggplot(set6_lin_fitted, aes(index, 
+                          resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+
+stcq6 <- ggplot(set6_lin_fitted, 
+       aes(sample = resc_std)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+stdlcr6 <- ggplot(set6_lin_lcr, 
+       aes(sample = resmcp)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+```
+
+
+## set 7
+
+```{r}
+set7_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set7)
+```
+
+```{r}
+set7_lin_fitted <- lin_extract_fitted_mod(set7_lin_mod, set7)
+set7_lin_lcr <- lin_extract_lcr_mod(set7_lin_mod, set7)
+```
+
+```{r}
+stdm7 <- ggplot(set7_lin_fitted, aes(index, 
+                          resm_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+stdc7 <- ggplot(set7_lin_fitted, aes(index, 
+                          resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+
+stcq7 <- ggplot(set7_lin_fitted, 
+       aes(sample = resc_std)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+stdlcr7 <- ggplot(set7_lin_lcr, 
+       aes(sample = resmcp)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+
+
+```
+
+## mean value 
+
+```{r}
+stdm0+ggtitle("no noise")+stdm1+ggtitle("20% mean") +stdm2+ggtitle("25%")+stdm3+ggtitle("30%")+stdm4+ggtitle("35%")
+stdc0+ggtitle("no noise")+stdc1+ggtitle("20% mean") +stdc2+ggtitle("25%")+stdc3+ggtitle("30%")+stdc4+ggtitle("35%")
+stcq0+ggtitle("no noise")+stcq1+ggtitle("20% mean") +stcq2+ggtitle("25%")+stcq3+ggtitle("30%")+stcq4+ggtitle("35%")
+stdlcr0+ggtitle("no noise")+stdlcr1+ggtitle("20% mean") +stdlcr2+ggtitle("25%")+stdlcr3+ggtitle("30%")+stdlcr4+ggtitle("35%")
+```
+
+```{r}
+subject_f+subject_set1+subject_set2+subject_set3+subject_set4
+attitude_f+attitude_set1+attitude_set2+attitude_set3+attitude_set4
+gender_f+gender_set1+gender_set2+gender_set3+gender_set4
+scenario_f+scenario_set1+scenario_set2+scenario_set3+scenario_set4
+
+summary(dataf)
+summary(set1)  # the average frequency increases. Median remains unchanged
+summary(set2)
+summary(set3)
+summary(set4)
+```
+
+
+#number of scenarios changed
+
+```{r}
+stdm0+ggtitle("no noise")+stdm5+ggtitle("2 scenarios") +stdm6+ggtitle("4 scenarios")+stdm7+ggtitle("6 scenarios")
+stdc0+ggtitle("no noise")+stdc5+ggtitle("2 sc.") +stdc6+ggtitle("4.sce")+stdc7+ggtitle("6 sc.")
+stcq0+ggtitle("no noise")+stcq5+ggtitle("2sc") +stcq6+ggtitle("4 sc")+stcq7+ggtitle("6sc")
+stdlcr0+ggtitle("no noise")+stdlcr5+ggtitle("2sc") +stdlcr6+ggtitle("4 sc")+stdlcr7+ggtitle("6 sc")
+```
+
+```{r}
+
+
 subject_f+subject_set5+subject_set6+subject_set7
 attitude_f+attitude_set5+attitude_set6+attitude_set7
 gender_f+gender_set5+gender_set6+gender_set7
@@ -655,10 +1470,62 @@ set7_4 <- lineup(true = set7_lin_lcr,
     axis.ticks.y = element_blank(),
     legend.position = "none"
   )
+```
 
-set7_1
-set7_2
-set7_3
-set7_4
+
+## mean value 
+
+```{r}
+stdm0+ggtitle("no noise")+stdm1+ggtitle("20% mean") +stdm2+ggtitle("25%")+stdm3+ggtitle("30%")+stdm4+ggtitle("35%")
+stdc0+ggtitle("no noise")+stdc1+ggtitle("20% mean") +stdc2+ggtitle("25%")+stdc3+ggtitle("30%")+stdc4+ggtitle("35%")
+stcq0+ggtitle("no noise")+stcq1+ggtitle("20% mean") +stcq2+ggtitle("25%")+stcq3+ggtitle("30%")+stcq4+ggtitle("35%")
+stdlcr0+ggtitle("no noise")+stdlcr1+ggtitle("20% mean") +stdlcr2+ggtitle("25%")+stdlcr3+ggtitle("30%")+stdlcr4+ggtitle("35%")
+```
+
+```{r}
+subject_f+subject_set1+subject_set2+subject_set3+subject_set4
+attitude_f+attitude_set1+attitude_set2+attitude_set3+attitude_set4
+gender_f+gender_set1+gender_set2+gender_set3+gender_set4
+scenario_f+scenario_set1+scenario_set2+scenario_set3+scenario_set4
+
+summary(dataf)
+summary(set1)  # the average frequency increases. Median remains unchanged
+summary(set2)
+summary(set3)
+summary(set4)
+```
+
+
+#number of scenarios changed
+
+```{r}
+stdm0+ggtitle("no noise")+stdm5+ggtitle("2 scenarios") +stdm6+ggtitle("4 scenarios")+stdm7+ggtitle("6 scenarios")
+stdc0+ggtitle("no noise")+stdc5+ggtitle("2 sc.") +stdc6+ggtitle("4.sce")+stdc7+ggtitle("6 sc.")
+stcq0+ggtitle("no noise")+stcq5+ggtitle("2sc") +stcq6+ggtitle("4 sc")+stcq7+ggtitle("6sc")
+stdlcr0+ggtitle("no noise")+stdlcr5+ggtitle("2sc") +stdlcr6+ggtitle("4 sc")+stdlcr7+ggtitle("6 sc")
+```
+
+```{r}
+
+
+subject_f+subject_set5+subject_set6+subject_set7
+attitude_f+attitude_set5+attitude_set6+attitude_set7
+gender_f+gender_set5+gender_set6+gender_set7
+scenario_f+scenario_set5+scenario_set6+scenario_set7
+
+summary(dataf)
+summary(set5)  
+summary(set6)
+summary(set7)
+
+```
+
+```{r}
+## scenarios are less obvious
+
+set4_1+ggtitle("35% mean")+set7_1+ggtitle("6 scenarios")
+set4_2+ggtitle("35% mean")+set7_2+ggtitle("6 scenarios")
+set4_3+ggtitle("35% mean")+set7_3+ggtitle("6 scenarios")
+set4_3+ggtitle("35% mean")+set7_4+ggtitle("6 scenarios")
 
 ```

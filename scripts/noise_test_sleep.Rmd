@@ -98,6 +98,400 @@ ggplot(
 
 The correlated model plot is not distinguishable from the independent random effects plot. There fore we could say that random effects could be independent. 
 
+```{r fitfn}
+# returns a tibble with fitted values along with marginal , conditional residuals as well as std.marginal and conditional residuals
+sl_extract_fitted <- function(mod, data) {
+  
+  N <- nrow(data)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+  
+ # subjects <- unique(data$Subject)
+  #nsubjects <- length(subjects)
+
+  #y <- data$y
+  #X <- getME(mod, "X") # fixed effects model matrix
+  #beta <- fixef(mod) # fixed effects estimate
+  #Z <- getME(mod, "Z") # random effects matrix
+  #u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2]) # extracts the modes of the random effects
+  #q <- length(u)
+  
+  y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- getME(mod, "beta")
+  Z <- getME(mod, "Z")
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+    if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])# covariance matrix of random effects
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(mod))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+  
+
+  Sigma <- Z %*% G %*% t(Z) + R # covariance matrix of marginal distribution of observations
+
+  Sigma_inv <- solve(Sigma) # inverse of sigma
+
+  # variance of marginal residual = sigma-X(X^t * sigma^-1 * X)*X^t
+  # variance of conditional residual = R*((sigma^-1)-(sigma^-1)*X*(X^t*sigma^-1*X)^-1*X^t*sigma^-1)*R
+
+
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(mod) %*% t(X) %*% Sigma_inv # (sigma^-1)-(sigma^-1)*X*(X^t*sigma^-1*X)^-1*X^t*sigma^-1
+
+  varMargRes <- Sigma - X %*% vcov(mod) %*% t(X) # variance of marginal residual
+  varCondRes <- R %*% P %*% R # variance of conditional residual
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G # random effects variance
+
+  # fitted or estimated marginal mean = X*Beta
+
+  fitted_df <- data %>%
+    dplyr::mutate(
+      fitted = as.vector(X %*% beta),
+      resm = y - fitted,
+      resc = as.vector(y - fitted - Z %*% u),
+      index = 1:n()
+    ) %>%
+    mutate(
+      resm_std = resm / sqrt(diag(varMargRes)[index]), # standardized marginal residual
+      resc_std = resc / sqrt(diag(varCondRes)[index]) # standardized conditional residual
+    ) %>%
+    ungroup()
+
+  return(fitted_df)
+}
+```
+
+```{r lcrfn}
+
+# returns the least confounded residual
+
+sl_extract_lcr <- function(mod, data) {
+
+  #n <- getME(mod, "n")
+  N <- nrow(data)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+ # y <- data$y
+  #X <- getME(mod, "X")
+  #beta <- fixef(mod)
+  #Z <- getME(mod, "Z")
+  #u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2])
+  #q <- length(u)
+  
+  
+  y <- getME(mod, "y")
+  X <- getME(mod, "X")
+  beta <- getME(mod, "beta")
+  Z <- getME(mod, "Z")
+  u <- getME(mod, "b")
+  q <- getME(mod, "q")
+  
+  nrfacs <- getME(mod,"n_rfacs")
+  num <- 0
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(mod))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(mod)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(mod))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+  Sigma <- Z %*% G %*% t(Z) + R
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(mod) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(mod) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- as.vector(y - fitted - Z %*% u)
+  index <- 1:nrow(data)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+
+  # standardized least confounded residual = c^T * e / sqrt(CRQRC^t)
+
+  R_half <- expm::sqrtm(R)
+
+  # singer et al calculation for least confounded residual
+  auxqn <- eigen((R_half %*% P %*% R_half),
+    symmetric = T,
+    only.values = FALSE
+  )
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var_resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var_resmcp))
+
+  resmcp_sl <- tibble::tibble(resmcp)
+
+  return(resmcp_sl)
+}
+```
+
+```{r simulate}
+# simulation of the models
+sl_sim <- function(mod, data, nsim = 19, seed, std = FALSE) {
+  fit_sim <- simulate(mod, nsim = nsim, seed = seed)
+  fit_refit <- lapply(fit_sim, refit, object = mod)
+  fit_simy <- lapply(fit_refit, function(x) getME(x, "y"))
+  fit_simy_y <- do.call("cbind", fit_simy)
+  fit_simy_y <- reshape2::melt(fit_simy_y)[-1]
+  names(fit_simy_y) <- c(".n", "y")
+  fit_simy_y$.n <- as.numeric(str_extract(fit_simy_y$.n, "\\d+"))
+  fit_simy_y$Subject <- rep(data$Subject, 19)
+  fit_simy_y$Days <- rep(data$Days, 19)
+  return(fit_simy_y)
+}
+```
+
+```{r residual-extract}
+colnames(sleepstudy)[1] <- c("y")
+sl_fitted <- sl_extract_fitted(slmod2, sleepstudy)
+sl_lcr <- sl_extract_lcr(slmod2, sleepstudy)
+```
+
+
+```{r null-stdres}
+
+# function returns a tibble containing marginal, std marginal , conditonal and std. conditional residuals after 19 simulations
+std_res <- function(data) {
+  
+
+
+purrr::map_dfr(1:19, function(i) {
+  df <- data %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
+  Z <- getME(m, "Z")
+  u <- getME(m, "b")
+  q <- getME(m, "q")
+
+ nrfacs <- getME(m,"n_rfacs")
+  num <- 0
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(m))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+  
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+}
+```
+
+```{r null-lcrres}
+# function returns least conditional residual after 19 simulations
+lcr_res <- function(data) {
+  
+  purrr::map_dfr(1:19, function(i) {
+  df <- data %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  y <- getME(m, "y")
+  X <- getME(m, "X")
+  beta <- getME(m, "beta")
+  Z <- getME(m, "Z")
+  u <- getME(m, "b")
+  q <- getME(m, "q")
+
+ nrfacs <- getME(m,"n_rfacs")
+ num <- 0 
+
+  if(nrfacs>1)
+    {
+ a <-  data %>%
+  select_if((names(data) %in% names(random.effects(m)))) 
+ 
+ for(i in 1:nrfacs)
+ {
+  num[i] <- nrow(unique(a[i]))
+ }
+  vc <- as.data.frame(VarCorr(m))
+  
+   R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
+  G1 <- vc$vcov[1] * diag(num[2])
+  G2 <- vc$vcov[2] * diag(num[1])
+
+  G <- Matrix::bdiag(G1, G2)
+    } else   
+  {
+  num <- data %>%
+  select_if((names(data) %in% names(random.effects(m)))) %>%
+  unique() %>%
+  nrow()
+
+  vc <- as.data.frame(VarCorr(m))
+   R <-  vc$vcov[3] * diag(N)
+  G1 <- vc$vcov[1] * diag(num)
+  G2 <- vc$vcov[2] * diag(num)
+  G <- Matrix::bdiag(G1, G2)
+}
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half),
+    symmetric = T,
+    only.values = FALSE
+  )
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var_resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var_resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+  
+}
+```
+
+
+
+
+
 ```{r}
 set.seed(1234)
 
@@ -289,7 +683,6 @@ thirtyf<- new_data(0.35)
 
 ```
 
-
 ```{r}
 
 twentypoint <- pointlm(twenty) +
@@ -338,14 +731,396 @@ summary(six)
 
 ```
 
-### Simulation
+```{r}
+m0 <- ggplot(sl_fitted, aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = sl_fitted %>% filter(resm_std > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+co0 <- ggplot(sl_fitted, aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = sl_fitted %>% filter(abs(resc_std) > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
 
+cq0 <- ggplot(sl_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+lcr0 <- ggplot(sl_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+
+```{r}
+twenty_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = twenty)
+```
+
+
+### Data plots 
+
+```{r}
+twenty_sl_fitted <- sl_extract_fitted(twenty_sl_mod, twenty)
+twenty_sl_lcr <- sl_extract_lcr(twenty_sl_mod, twenty)
+```
+
+```{r}
+m1 <- ggplot(twenty_sl_fitted, aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = twenty_sl_fitted %>% filter(resm_std > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+co1 <- ggplot(twenty_sl_fitted, aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = twenty_sl_fitted %>% filter(abs(resc_std) > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+
+cq1 <- ggplot(twenty_sl_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+lcr1 <- ggplot(twenty_sl_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+##tfive data plot 
+
+```{r}
+tfive_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = tfive)
+```
+
+
+### Data plots 
+
+```{r}
+tfive_sl_fitted <- sl_extract_fitted(tfive_sl_mod, tfive)
+tfive_sl_lcr <- sl_extract_lcr(tfive_sl_mod, tfive)
+```
+
+```{r}
+m2 <- ggplot(tfive_sl_fitted, aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = tfive_sl_fitted %>% filter(resm_std > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+co2 <- ggplot(tfive_sl_fitted, aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = tfive_sl_fitted %>% filter(abs(resc_std) > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+
+cq2 <- ggplot(tfive_sl_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+lcr2 <- ggplot(tfive_sl_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+##thirty data plot 
+
+```{r}
+thirty_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = thirty)
+```
+
+
+### Data plots 
+
+```{r}
+thirty_sl_fitted <- sl_extract_fitted(thirty_sl_mod, thirty)
+thirty_sl_lcr <- sl_extract_lcr(thirty_sl_mod, thirty)
+```
+
+```{r}
+m3 <- ggplot(thirty_sl_fitted, aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = thirty_sl_fitted %>% filter(resm_std > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+co3 <- ggplot(thirty_sl_fitted, aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = thirty_sl_fitted %>% filter(abs(resc_std) > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+
+cq3 <- ggplot(thirty_sl_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+lcr3 <- ggplot(thirty_sl_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+##thirtyf data plot 
+
+```{r}
+thirtyf_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = thirtyf)
+```
+
+
+### Data plots 
+
+```{r}
+thirtyf_sl_fitted <- sl_extract_fitted(thirtyf_sl_mod, thirtyf)
+thirtyf_sl_lcr <- sl_extract_lcr(thirtyf_sl_mod, thirtyf)
+```
+
+```{r}
+m4 <- ggplot(thirtyf_sl_fitted, aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = thirtyf_sl_fitted %>% filter(resm_std > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+co4 <- ggplot(thirtyf_sl_fitted, aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = thirtyf_sl_fitted %>% filter(abs(resc_std) > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+
+cq4 <- ggplot(thirtyf_sl_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+lcr4 <- ggplot(thirtyf_sl_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+
+
+## subjects data plots
+
+
+```{r}
+two_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = two)
+```
+
+
+### Data plots 
+
+```{r}
+two_sl_fitted <- sl_extract_fitted(two_sl_mod, two)
+two_sl_lcr <- sl_extract_lcr(two_sl_mod, two)
+```
+
+```{r}
+m5 <- ggplot(two_sl_fitted, aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = two_sl_fitted %>% filter(resm_std > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+co5 <- ggplot(two_sl_fitted, aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = two_sl_fitted %>% filter(abs(resc_std) > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+
+cq5 <- ggplot(two_sl_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+lcr5 <- ggplot(two_sl_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+##four data plot 
+
+```{r}
+four_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = four)
+```
+
+
+### Data plots 
+
+```{r}
+four_sl_fitted <- sl_extract_fitted(four_sl_mod, four)
+four_sl_lcr <- sl_extract_lcr(four_sl_mod, four)
+```
+
+```{r}
+m6 <- ggplot(four_sl_fitted, aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data =four_sl_fitted %>% filter(resm_std > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+co6 <- ggplot(four_sl_fitted, aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = four_sl_fitted %>% filter(abs(resc_std) > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+
+cq6 <- ggplot(four_sl_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+lcr6 <- ggplot(four_sl_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+##six data plot 
 ```{r}
 six_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = six)
 six_sl_sim <- sl_sim(six_sl_mod, six, seed = 2345)
 six_sl_fitted <- sl_extract_fitted(six_sl_mod, six)
 six_sl_lcr <- sl_extract_lcr(six_sl_mod, six)
 ```
+
+
+```{r}
+m7 <- ggplot(six_sl_fitted, aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = six_sl_fitted %>% filter(resm_std > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+co7 <- ggplot(six_sl_fitted, aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(
+    data = six_sl_fitted %>% filter(abs(resc_std) > 3),
+    aes(label = index),
+    nudge_x = 0.35,
+    nudge_y = 0.35,
+    size = 2
+  )
+
+cq7 <- ggplot(six_sl_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+lcr7 <- ggplot(six_sl_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+```{r}
+# mean value changed
+
+m0+m1 + ggtitle("20% noise")+
+m2 + ggtitle("25% noise")+
+m3 + ggtitle("30% noise")+
+m4 + ggtitle("35% noise")
+co0+co1 + ggtitle("20% noise")+
+co2 + ggtitle("25% noise")+
+co3 + ggtitle("30% noise")+
+co4 + ggtitle("35% noise")
+cq0+cq1 + ggtitle("20% noise")+
+cq2 + ggtitle("25% noise")+
+cq3 + ggtitle("30% noise")+
+cq4 + ggtitle("35% noise")
+lcr0+lcr1 + ggtitle("20% noise")+
+lcr2 + ggtitle("25% noise")+
+lcr3 + ggtitle("30% noise")+
+lcr4 + ggtitle("35% noise")
+
+```
+
+```{r}
+# subjects 
+
+m0+m5 + ggtitle("2 subs")+
+m6 + ggtitle("4 subs")+
+m7 + ggtitle("6 subs")
+
+co0+co1 + ggtitle("2 subs")+
+co2 + ggtitle("4 subs")+
+co3 + ggtitle("6 subs")
+
+cq0+cq1 + ggtitle("2 subs")+
+cq2 + ggtitle("4 subs")+
+cq3 + ggtitle("6 subs")
+
+lcr0+lcr1 + ggtitle("2 subs")+
+lcr2 + ggtitle("4 subs")+
+lcr3 + ggtitle("6 subs")
+
+
+```
+
+
+### Simulation
+
 
 ```{r nullfitted-six2}
 six_sl_sim_fitted <- std_res(six_sl_sim)
@@ -355,6 +1130,7 @@ six_sl_sim_fitted <- std_res(six_sl_sim)
 six_sl_simlcr <- lcr_res(six_sl_sim)
 
 ```
+
 ```{r}
 t_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = thirtyf)
 t_sl_sim <- sl_sim(t_sl_mod, six, seed = 2345)
