@@ -922,15 +922,15 @@ lcr03 <- ggplot(ften_sl_lcr, aes(sample = resmcp)) +
 
 ```{r}
 twenty_sl_mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = twenty)
-```
-
-
-### Data plots 
-
-```{r}
+twenty_sl_sim <- sl_sim(twenty_sl_mod, six, seed = 2345)
 twenty_sl_fitted <- sl_extract_fitted(twenty_sl_mod, twenty)
 twenty_sl_lcr <- sl_extract_lcr(twenty_sl_mod, twenty)
+
+twenty_sl_sim_fitted <- std_res(twenty_sl_sim)
+twenty_sl_simlcr <- lcr_res(twenty_sl_sim)
 ```
+
+
 
 ```{r}
 m1 <- ggplot(twenty_sl_fitted, aes(index, resm_std)) +
@@ -963,6 +963,101 @@ lcr1 <- ggplot(twenty_sl_lcr, aes(sample = resmcp)) +
   geom_qq_line(color = "red")
 ```
 
+#### Lineup plots
+
+```{r twenty3n-plo2, fig.height=6}
+twenty_1 <-
+  lineup(true = twenty_sl_fitted,
+         samples = twenty_sl_sim_fitted,
+         pos = 13) %>%
+  ggplot(aes(index, resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+
+```
+
+```{r twenty3n-plo4, fig.height=6}
+twenty_2 <-
+  lineup(true = twenty_sl_fitted,
+         samples = twenty_sl_sim_fitted,
+         pos = 13) %>%
+  ggplot(aes(index, resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+
+```
+
+```{r twenty3n-plo6, fig.height=6}
+twenty_3 <-
+  lineup(true = twenty_sl_fitted,
+         samples = twenty_sl_sim_fitted,
+         pos = 4) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+```
+
+
+```{r twenty3n-plo6-lcr, fig.height=6}
+twenty_4 <-
+  lineup(true = twenty_sl_lcr,
+         samples = twenty_sl_simlcr,
+         pos = 4) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+twenty_1
+twenty_2
+twenty_3
+twenty_4
+
+```
 ##tfive data plot 
 
 ```{r}
@@ -1869,11 +1964,17 @@ t_4 <-
 
 ```
 ```{r}
-six_1 + ggtitle("6 days")  +t_1 + ggtitle("35%")
-six_2 + ggtitle("6 days")  +t_2+ ggtitle("35%")
-six_3 +ggtitle("6 days")  +t_3+ ggtitle("35%")
-six_4 +ggtitle("6 days")  + t_4+ ggtitle("35%")
+six_1 + ggtitle("6 days")  +t_1 + ggtitle("35%")+five_1+ggtitle("5%")+twenty_1+ggtitle("20%")
+six_2 + ggtitle("6 days")  +t_2+ ggtitle("35%")+five_2+ggtitle("5%")+twenty_2+ggtitle("20%")
+six_3 +ggtitle("6 days")  +t_3+ ggtitle("35%")+five_3+ggtitle("5%")+twenty_3+ggtitle("20%")
+six_4 +ggtitle("6 days")  + t_4+ ggtitle("35%")+five_4+ggtitle("5%")+twenty_4+ggtitle("20%")
 
+
+five_1+ggtitle("5%")+twenty_1+ggtitle("20%")
+five_2+ggtitle("5%")+twenty_2+ggtitle("20%")
+five_3+ggtitle("5%")+twenty_3+ggtitle("20%")
+five_4+ggtitle("5%")+twenty_4+ggtitle("20%")
 
 ```
+5 % is not too obvious and true plot can be made out
 
