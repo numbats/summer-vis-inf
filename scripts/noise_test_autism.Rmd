@@ -470,28 +470,124 @@ return (autism_repc3)
 autism_mod <- lmer(y ~ age2 + sicdegp + gender:race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism)
 autism_fitted <- autism_extract_fitted_mod(autism_mod, autism)
 autism_lcr <- autism_extract_lcr_mod(autism_mod, autism)
+
 ```
 
 # Data plots
 
 ```{r}
- a0 <- ggplot(autism_s1_fitted, aes(index, resm_std, color = gender, shape = race)) +
+ a0 <- ggplot(autism_fitted, aes(index, resm_std, color = gender, shape = race)) +
   geom_point()
 
- b0 <- ggplot(autism_s1_fitted, aes(interaction(gender, race), resc_std)) +
+ b0 <- ggplot(autism_fitted, aes(interaction(gender, race), resc_std)) +
   geom_boxplot() +
   ylab("Standardised conditional residuals") +
   theme()
 
-c0 <- ggplot(autism_s1_fitted, aes(sample = resc_std)) +
+c0 <- ggplot(autism_fitted, aes(sample = resc_std)) +
   geom_qq() +
   geom_qq_line(color = "red")
 
-d0 <- ggplot(autism_s1_lcr, aes(sample = resmcp)) +
+d0 <- ggplot(autism_lcr, aes(sample = resmcp)) +
   geom_qq() +
   geom_qq_line(color = "red")
 ```
 
+
+
+
+## set 01 
+
+
+
+```{r}
+autism_set01 <- median_noise(0.05)
+autism_s01_mod <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism_set01)
+autism_s01_fitted <- autism_extract_fitted_mod(autism_s01_mod, autism_set01)
+autism_s01_lcr <- autism_extract_lcr_mod(autism_s01_mod, autism_set01)
+```
+
+# Data plots
+
+```{r}
+ a01 <- ggplot(autism_s01_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()
+
+ b01 <- ggplot(autism_s01_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+c01 <- ggplot(autism_s01_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d01 <- ggplot(autism_s01_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+## set 02
+
+
+
+```{r}
+autism_set02 <- median_noise(0.1)
+autism_s02_mod <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism_set02)
+autism_s02_fitted <- autism_extract_fitted_mod(autism_s02_mod, autism_set02)
+autism_s02_lcr <- autism_extract_lcr_mod(autism_s02_mod, autism_set02)
+```
+
+# Data plots
+
+```{r}
+ a02 <- ggplot(autism_s02_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()
+
+ b02 <- ggplot(autism_s02_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+c02 <- ggplot(autism_s02_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d02 <- ggplot(autism_s02_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+## set 03
+
+
+
+```{r}
+autism_set03 <- median_noise(0.15)
+autism_s03_mod <- lmer(y ~ age2 + sicdegp + race + bestest2 + (age2 - 1 | childid) + (I(age2^2) - 1 | childid), data = autism_set03)
+autism_s03_fitted <- autism_extract_fitted_mod(autism_s03_mod, autism_set03)
+autism_s03_lcr <- autism_extract_lcr_mod(autism_s03_mod, autism_set03)
+```
+
+# Data plots
+
+```{r}
+ a03 <- ggplot(autism_s03_fitted, aes(index, resm_std, color = gender, shape = race)) +
+  geom_point()
+
+ b03 <- ggplot(autism_s03_fitted, aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  ylab("Standardised conditional residuals") +
+  theme()
+
+c03 <- ggplot(autism_s03_fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+d03 <- ggplot(autism_s03_lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
 
 ### set 1
 
@@ -817,7 +913,7 @@ d5 <- ggplot(autism_s5_lcr, aes(sample = resmcp)) +
 
 ```{r}
 
-autism_set6 <- median_noise(0.3)
+autism_set6 <- obs_noise(0.3)
 
 age6 <- ggplot(autism_set6, aes(age2, log10(y))) +
   geom_point() +
@@ -879,13 +975,13 @@ d6<- ggplot(autism_s6_lcr, aes(sample = resmcp)) +
 ```
 
 
-## set 3
+## set 7
 
 
 
 ```{r}
 
-autism_set7 <- median_noise(0.35)
+autism_set7 <- obs_noise(0.35)
 
 age7 <- ggplot(autism_set7, aes(age2, log10(y))) +
   geom_point() +
@@ -945,12 +1041,12 @@ d7 <- ggplot(autism_s7_lcr, aes(sample = resmcp)) +
 
 ```
 
-# set 4
+# set 8
 
 
 ```{r}
 
-autism_set8 <- median_noise(0.4)
+autism_set8 <- obs_noise(0.4)
 
 age8 <- ggplot(autism_set8, aes(age2, log10(y))) +
   geom_point() +
@@ -992,7 +1088,7 @@ autism_s8_lcr <- autism_extract_lcr_mod(autism_s8_mod, autism_set8)
 
 ```{r}
 a8 <- ggplot(autism_s8_fitted, aes(index, resm_std, color = gender, shape = race)) +
-  geom_point()+
+  geom_point()
   
 
 b8<- ggplot(autism_s8_fitted, aes(interaction(gender, race), resc_std)) +
@@ -1040,43 +1136,447 @@ best5+best6+best7+best8
 ```{r}
 
 #change in median 
-a0+a1+ggtitle("20%")+
+a0+
+  a01+ggtitle("5%")+
+  a02+ggtitle("10%")+
+  a03+ggtitle("15%")+
+  a1+ggtitle("20%")+
   a2+ggtitle("25%")+
   a3+ggtitle("30%")+
   a4+ggtitle("35%")
-b0+b1+ggtitle("20%")+
+
+
+
+b0+
+  b01+ggtitle("5%")+
+b02+ggtitle("10%")+
+  b03+ggtitle("15%")+
+  b1+ggtitle("20%")+
   b2+ggtitle("25%")+
   b3+ggtitle("30%")+
   b4+ggtitle("35%")
-c0+c1+ggtitle("20%")+
+
+c0+
+  c01+ggtitle("5%")+
+  c02+ggtitle("10%")+
+  c03+ggtitle("15%")+
+  c1+ggtitle("20%")+
   c2+ggtitle("25%")+
   c3+ggtitle("30%")+
   c4+ggtitle("35%")
-d0+d1+ggtitle("20%")+
+
+d0+
+  d01+ggtitle("5%")+
+  d02+ggtitle("10%")+
+  d03+ggtitle("15%")+
+ d1+ggtitle("20%")+
  d2+ggtitle("25%")+
-  d3+ggtitle("30%")+
+ d3+ggtitle("30%")+
   d4+ggtitle("35%")
 ```
 
 ```{r}
 #change in observations
-a0+a5+ggtitle("25%")+
-  a6+ggtitle("30%")+
-  a7+ggtitle("35%")+
-  a8+ggtitle("40%")
-b0+b5+ggtitle("25%")+
-  b6+ggtitle("30%")+
-  b7+ggtitle("35%")+
-  b8+ggtitle("40%")
-c0+c5+ggtitle("25%")+
-  c6+ggtitle("30%")+
-  c7+ggtitle("35%")+
-  c8+ggtitle("40%")
+a0+a5+ggtitle("25 % obs")+
+  a6+ggtitle("30% obs")+
+  a7+ggtitle("35% obs")+
+  a8+ggtitle("40% obs")
+b0+b5+ggtitle("25% obs")+
+  b6+ggtitle("30% obs")+
+  b7+ggtitle("35% obs")+
+  b8+ggtitle("40% obs")
+c0+c5+ggtitle("25% obs")+
+  c6+ggtitle("30% obs")+
+  c7+ggtitle("35% obs")+
+  c8+ggtitle("40% obs")
 d0+ylim(-6,7)+
-  d5+ggtitle("25%")+ylim(-6,7)+
-  d6+ggtitle("30%")+ylim(-6,7)+
-  d7+ggtitle("35%")+ylim(-6,7)+
-  d8+ggtitle("40%")+ylim(-6,7)
+  d5+ggtitle("25% obs")+ylim(-6,7)+
+  d6+ggtitle("30% obs")+ylim(-6,7)+
+  d7+ggtitle("35% obs")+ylim(-6,7)+
+  d8+ggtitle("40% obs")+ylim(-6,7)
 ```
+
+```{r}
+
+autism_s01_sim <- autism_sim(autism_s01_mod, autism_set01, seed = 4739)
+
+autism_s01n_fitted <- std_res(autism_s01_sim)
+
+autism_s01n_lcr <- lcr_res(autism_s01_sim)
+```
+
+### Outlying observations
+
+```{r}
+a01_1 <-
+  lineup(true = autism_s01_fitted,
+         samples = autism_s01n_fitted,
+         pos = 2) %>%
+  ggplot(aes(interaction(gender, race), resm_std)) +
+  geom_boxplot() +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+
+
+a01_2 <-
+  lineup(true = autism_s01_fitted,
+         samples = autism_s01n_fitted,
+         pos = 2) %>%
+  ggplot(aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+
+
+a01_3 <-
+  lineup(true = autism_s01_fitted,
+         samples = autism_s01n_fitted,
+         pos = 6) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+
+
+a01_4 <-
+  lineup(true = autism_s01_lcr,
+         samples = autism_s01n_lcr,
+         pos = 6) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+
+```
+
+
+
+# set 1
+
+```{r}
+
+autism_s1_sim <- autism_sim(autism_s1_mod, autism_set1, seed = 4739)
+
+autism_s1n_fitted <- std_res(autism_s1_sim)
+
+autism_s1n_lcr <- lcr_res(autism_s1_sim)
+```
+
+### Outlying observations
+
+```{r}
+a1_1 <-
+  lineup(true = autism_s1_fitted,
+         samples = autism_s1n_fitted,
+         pos = 2) %>%
+  ggplot(aes(interaction(gender, race), resm_std)) +
+  geom_boxplot() +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+
+
+a1_2 <-
+  lineup(true = autism_s1_fitted,
+         samples = autism_s1n_fitted,
+         pos = 2) %>%
+  ggplot(aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+
+
+a1_3 <-
+  lineup(true = autism_s1_fitted,
+         samples = autism_s1n_fitted,
+         pos = 6) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+
+
+a1_4 <-
+  lineup(true = autism_s1_lcr,
+         samples = autism_s1n_lcr,
+         pos = 6) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+
+```
+
+
+
+
+
+
+## set 4 
+
+```{r}
+
+autism_s4_sim <- autism_sim(autism_s4_mod, autism_set4, seed = 4739)
+
+autism_s4n_fitted <- std_res(autism_s4n_sim)
+
+autism_s4n_lcr <- lcr_res(autism_s4n_sim)
+```
+
+### Outlying observations
+
+```{r}
+a4_1 <-
+  lineup(true = autism_s4_fitted,
+         samples = autism_s4n_fitted,
+         pos = 2) %>%
+  ggplot(aes(interaction(gender, race), resm_std)) +
+  geom_boxplot() +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+
+
+a4_2 <-
+  lineup(true = autism_s4_fitted,
+         samples = autism_s4n_fitted,
+         pos = 2) %>%
+  ggplot(aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+
+
+a4_3 <-
+  lineup(true = austism_s4_fitted,
+         samples = autism_s4n_fitted,
+         pos = 6) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+
+
+a4_4 <-
+  lineup(true = autism_s4_lcr,
+         samples = autism_s4n_lcr,
+         pos = 6) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+
+```
+
+
+# set 8
+
+```{r}
+
+autism_s8_sim <- autism_sim(autism_s8_mod, autism_set8, seed = 4739)
+
+autism_s8n_fitted <- std_res(autism_s8_sim)
+
+autism_s8n_lcr <- lcr_res(autism_s8_sim)
+```
+
+### Outlying observations
+
+```{r}
+a8_1 <-
+  lineup(true = autism_s8_fitted,
+         samples = autism_s8n_fitted,
+         pos = 2) %>%
+  ggplot(aes(interaction(gender, race), resm_std)) +
+  geom_boxplot() +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+
+
+a8_2 <-
+  lineup(true = autism_s8_fitted,
+         samples = autism_s8n_fitted,
+         pos = 2) %>%
+  ggplot(aes(interaction(gender, race), resc_std)) +
+  geom_boxplot() +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+
+
+a8_3 <-
+  lineup(true = autism_s8_fitted,
+         samples = autism_s8n_fitted,
+         pos = 6) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+
+
+a8_4 <-
+  lineup(true = autism_s8_lcr,
+         samples = autism_s8n_lcr,
+         pos = 6) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap( ~ .sample, ncol = 5) +
+  ylab(NULL) +
+  xlab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none",
+    aspect.ratio = 1
+  )
+
+
+```
+
+
+
+
+
 
 

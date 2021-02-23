@@ -369,18 +369,6 @@ lin_sim <- function(mod, data, nsim = 19, seed, std = FALSE){
 ```
 
 
-```{r model}
-colnames(dataf)[5] <- c("y")
-#df <- na.omit(df)
-fit <- lmer(y ~ attitude + gender + 
-              (1|subject) + (1|scenario),
-            data = dataf)
-
-lin_fitted <- lin_extract_fitted_mod(fit, dataf)
-lin_unit <- lin_extract_unit_mod(fit, dataf)
-lin_lcr <- lin_extract_lcr_mod(fit, dataf)
-```
-
 
 ```{r}
 std_res <- function(data) {
@@ -459,18 +447,14 @@ std_res <- function(data) {
 ```{r null-lcrres}
 # function returns least conditional residual after 19 simulations
 lcr_res <- function(data) {
-  
-  purrr::map_dfr(1:19, function(i) {
+ purrr::map_dfr(1:19, function(i) {
   df <- data %>% filter(.n == i)
   m <- lmer(y ~ 1 +attitude + gender + 
               (1|subject) + (1|scenario),
             data = df)
 
   N <- nrow(df)
-  num <- data %>%
-  select_if((names(data) %in% names(random.effects(m)))) %>%
-  unique() %>%
-  nrow()
+
 
   y <- getME(m, "y")
   X <- getME(m, "X")
@@ -487,9 +471,9 @@ lcr_res <- function(data) {
  a <-  data %>%
   select_if((names(data) %in% names(random.effects(m)))) 
  
- for(i in 1:nrfacs)
+ for(p in 1:nrfacs)
  {
-  num[i] <- nrow(unique(a[i]))
+  num[p] <- nrow(unique(a[p]))
  }
   vc <- as.data.frame(VarCorr(m))
   
@@ -542,7 +526,7 @@ lcr_res <- function(data) {
   var_resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
 
   resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var_resmcp))
-  .n <- i
+  .n = i
 
   tibble::tibble(.n, resmcp)
 })
@@ -550,6 +534,17 @@ lcr_res <- function(data) {
 }
 ```
 
+```{r model}
+colnames(dataf)[5] <- c("y")
+#df <- na.omit(df)
+fit <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = dataf)
+
+lin_fitted <- lin_extract_fitted_mod(fit, dataf)
+lin_unit <- lin_extract_unit_mod(fit, dataf)
+lin_lcr <- lin_extract_lcr_mod(fit, dataf)
+```
 
 
 # noise 
@@ -631,6 +626,16 @@ return(data)
 
 both females and males for each of the attitude were taken and a noise of 20% of total mean value was injected into a frequency level under a random scenario.
 
+
+```{r}
+
+set01 <- noise(0.05,1)
+set02 <- noise(0.1,1)
+set03 <- noise(0.15,1)
+
+```
+
+
 ```{r}
 
 set1 <- noise(0.2,1)
@@ -664,6 +669,7 @@ scenario_set1 <- ggplot(set1, aes(scenario, y)) +
 
 
 ```
+
 
 ```{r}
 set2 <- noise(0.25,1)
@@ -804,6 +810,142 @@ stdlcr0 <- ggplot(lin_lcr,
   geom_qq() + 
   geom_qq_line(color = "red")
 ```
+
+## set 01
+
+```{r}
+set01_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set01)
+```
+
+```{r}
+set01_lin_fitted <- lin_extract_fitted_mod(set01_lin_mod, set01)
+set01_lin_lcr <- lin_extract_lcr_mod(set01_lin_mod, set01)
+```
+
+```{r}
+stdm01 <- ggplot(set01_lin_fitted, aes(index, 
+                          resm_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+stdc01 <- ggplot(set01_lin_fitted, aes(index, 
+                          resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+
+stcq01 <- ggplot(set01_lin_fitted, 
+       aes(sample = resc_std)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+stdlcr01 <- ggplot(set01_lin_lcr, 
+       aes(sample = resmcp)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+
+
+```
+
+## set 02
+
+```{r}
+set02_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set02)
+```
+
+```{r}
+set02_lin_fitted <- lin_extract_fitted_mod(set02_lin_mod, set02)
+set02_lin_lcr <- lin_extract_lcr_mod(set02_lin_mod, set02)
+```
+
+```{r}
+stdm02 <- ggplot(set02_lin_fitted, aes(index, 
+                          resm_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+stdc02 <- ggplot(set02_lin_fitted, aes(index, 
+                          resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+
+stcq02 <- ggplot(set02_lin_fitted, 
+       aes(sample = resc_std)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+stdlcr02 <- ggplot(set02_lin_lcr, 
+       aes(sample = resmcp)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+
+
+```
+
+## set 03
+
+```{r}
+set03_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set03)
+```
+
+```{r}
+set03_lin_fitted <- lin_extract_fitted_mod(set03_lin_mod, set03)
+set03_lin_lcr <- lin_extract_lcr_mod(set03_lin_mod, set03)
+```
+
+```{r}
+stdm03 <- ggplot(set03_lin_fitted, aes(index, 
+                          resm_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(axis.text.y = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        axis.ticks.y = element_blank(), 
+        legend.position="none")
+
+stdc03 <- ggplot(set03_lin_fitted, aes(index, 
+                          resc_std)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+
+stcq03 <- ggplot(set03_lin_fitted, 
+       aes(sample = resc_std)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+stdlcr03 <- ggplot(set03_lin_lcr, 
+       aes(sample = resmcp)) + 
+  geom_qq() + 
+  geom_qq_line(color = "red")
+
+
+
+```
+
 
 ## set 1
 
@@ -1383,6 +1525,7 @@ set4_3
 set4_4
 
 ```
+
 ```{r}
 set7_lin_mod <- lmer(y ~ attitude + gender + 
               (1|subject) + (1|scenario),
@@ -1476,10 +1619,24 @@ set7_4 <- lineup(true = set7_lin_lcr,
 ## mean value 
 
 ```{r}
-stdm0+ggtitle("no noise")+stdm1+ggtitle("20% mean") +stdm2+ggtitle("25%")+stdm3+ggtitle("30%")+stdm4+ggtitle("35%")
-stdc0+ggtitle("no noise")+stdc1+ggtitle("20% mean") +stdc2+ggtitle("25%")+stdc3+ggtitle("30%")+stdc4+ggtitle("35%")
-stcq0+ggtitle("no noise")+stcq1+ggtitle("20% mean") +stcq2+ggtitle("25%")+stcq3+ggtitle("30%")+stcq4+ggtitle("35%")
-stdlcr0+ggtitle("no noise")+stdlcr1+ggtitle("20% mean") +stdlcr2+ggtitle("25%")+stdlcr3+ggtitle("30%")+stdlcr4+ggtitle("35%")
+stdm0+ggtitle("no noise")+stdm01+ggtitle("5% mean") +stdm02+ggtitle("10%")+stdm03+ggtitle("15%")+
+stdm1+ggtitle("20% mean") +stdm2+ggtitle("25%")+stdm3+ggtitle("30%")+stdm4+ggtitle("35%")+stdm5+ggtitle("2 scenarios")+stdm6+ggtitle("4 scenarios")+stdm7+ggtitle("6 scenarios")
+
+
+stdc0+ggtitle("no noise")+stdc01+ggtitle("5% mean") +stdc02+ggtitle("10%")+stdc03+ggtitle("15%")+
+stdc1+ggtitle("20% mean") +stdc2+ggtitle("25%")+stdc3+ggtitle("30%")+stdc4+ggtitle("35%")+
+stdc5+ggtitle("2 sc.") +stdc6+ggtitle("4.sce")+stdc7+ggtitle("6 sc.")
+
+
+stcq0+ggtitle("no noise")+stcq01+ggtitle("5% mean") +stcq02+ggtitle("10%")+stcq03+ggtitle("15%")+
+stcq1+ggtitle("20% mean") +stcq2+ggtitle("25%")+stcq3+ggtitle("30%")+
+stcq4+ggtitle("35%")+stcq5+ggtitle("2sc") +stcq6+ggtitle("4 sc")+stcq7+ggtitle("6sc")
+
+
+stdlcr0+ggtitle("no noise")+stdlcr01+ggtitle("5% mean") +stdlcr02+ggtitle("10%")+stdlcr03+ggtitle("15%")+
+stdlcr1+ggtitle("20% mean") +stdlcr2+ggtitle("25%")+stdlcr3+ggtitle("30%")+stdlcr4+ggtitle("35%")+
+stdlcr5+ggtitle("2sc") +stdlcr6+ggtitle("4 sc")+stdlcr7+ggtitle("6 sc")
+
 ```
 
 ```{r}
@@ -1529,3 +1686,194 @@ set4_3+ggtitle("35% mean")+set7_3+ggtitle("6 scenarios")
 set4_3+ggtitle("35% mean")+set7_4+ggtitle("6 scenarios")
 
 ```
+
+## set 01 
+```{r}
+set01_lin_fitted <- lin_extract_fitted_mod(set01_lin_mod, set01)
+set01_lin_lcr <- lin_extract_lcr_mod(set01_lin_mod, set01)
+
+
+
+set01_sim <- lin_sim(set01_lin_mod, set01, seed = 1234)
+
+set01_lin_sim_fitted <- std_res(set01_sim)
+set01_lin_sim_lcr <- lcr_res(set01_sim)
+```
+
+```{r}
+set01_1 <-  lineup(true = set01_lin_fitted,
+                samples = set01_lin_sim_fitted,
+                pos = 7) %>%
+  ggplot(aes(index,
+             resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+
+set01_2 <- lineup(true = set01_lin_fitted,
+                samples = set01_lin_sim_fitted,
+                pos = 7) %>%
+  ggplot(aes(index,
+             resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+set01_3 <- lineup(true = set01_lin_fitted,
+                samples = set01_lin_sim_fitted,
+                pos = 9) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+set01_4 <- lineup(true = set01_lin_lcr,
+                samples = set01_lin_sim_lcr,
+                pos = 9) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+
+set01_1
+set01_2
+set01_3
+set01_4
+```
+```{r}
+set1_lin_mod <- lmer(y ~ attitude + gender + 
+              (1|subject) + (1|scenario),
+            data = set1)
+
+set1_lin_fitted <- lin_extract_fitted_mod(set1_lin_mod, set1)
+set1_lin_lcr <- lin_extract_lcr_mod(set1_lin_mod, set1)
+
+set1_sim <- lin_sim(set1_lin_mod, set1, seed = 1234)
+
+set1_lin_sim_fitted <- std_res(set1_sim)
+
+set1_lin_sim_lcr <- lcr_res(set1_sim)
+
+set1_1 <-  lineup(true = set1_lin_fitted,
+                samples = set1_lin_sim_fitted,
+                pos = 7) %>%
+  ggplot(aes(index,
+             resm_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap( ~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+
+set1_2 <- lineup(true = set1_lin_fitted,
+                samples = set1_lin_sim_fitted,
+                pos = 7) %>%
+  ggplot(aes(index,
+             resc_std)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+set1_3 <- lineup(true = set1_lin_fitted,
+                samples = set1_lin_sim_fitted,
+                pos = 9) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+set1_4 <- lineup(true = set1_lin_lcr,
+                samples = set1_lin_sim_lcr,
+                pos = 9) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~ .sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+set1_1
+set1_2
+set1_3
+set1_4
+
+```
+
+```{r}
+set01_1+ggtitle("5% mean")+set1_1+ggtitle("20%")
+set01_2+ggtitle("5% mean")+set1_2+ggtitle("20%")
+set01_3+ggtitle("5% mean")+set1_3+ggtitle("20%")
+set01_3+ggtitle("5% mean")+set1_4+ggtitle("20%")
+```
+
