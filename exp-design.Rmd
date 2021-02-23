@@ -13,15 +13,22 @@ knitr::opts_chunk$set(
 ```{r}
 library(edibble)
 
-start_design("Residual diagnostic for multi-level models") %>% 
+set.seed(1)
+df <- start_design("Residual diagnostic for multi-level models") %>% 
+  set_context(data_source = "lme4::sleepstudy",
+              data_info = "18 subjects measured over 10 days on reaction time",
+              noise = "20% of the mean added to ~33% of participants (=6 participants) for (random) 2 days") %>% 
   set_units(person = 100,
             question = nested_in(person, 12)) %>% 
-  set_trts(res_type = c("Conditional", "Least confounded"),
-           #data = c("A", "B", "C"),
-           noise = c("none", "some", "a lot")) %>% 
-  allocate_trts(res_type ~ question) %>% 
+  set_trts(resid = c("Conditional", "Least-confounded"),
+           noise = c("no", "yes"),
+           plot = c("QQ-plot", "residual plot"),
+           data = c("rep1", "rep2", "rep3", "rep4", "rep5")) %>% 
+  allocate_trts(resid:noise:plot ~ question,
+                       data ~ person) %>% 
   randomise_trts() %>% 
   serve_table()
 
+df
 ```
 
