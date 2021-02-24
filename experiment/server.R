@@ -56,17 +56,18 @@ shinyServer(
     seed=sample(1000:2000,1)
     set.seed(seed)
     repl <- sample(1:5,1)
+    order <-  sample(1:4,4,replace = F)
 
     # load survey image
     image_list <- c(
-                    paste0("www/images/sleepstudy/v", "1",repl,  "_1" ,".png"),
-                    paste0("www/images/sleepstudy/v", "2",repl,  "_2" ,".png"),
-                    paste0("www/images/sleepstudy/v", "1",repl, "_3",  ".png"),
-                    paste0("www/images/sleepstudy/v", "2",repl, "_4", ".png"),
-                    paste0("www/images/sleepstudy/v", "2",repl,  "_1" ,".png"),
-                    paste0("www/images/sleepstudy/v", "1",repl,  "_2" ,".png"),
-                    paste0("www/images/sleepstudy/v", "2",repl, "_3",  ".png"),
-                    paste0("www/images/sleepstudy/v", "1",repl, "_4", ".png"))
+                    paste0("www/images/sleepstudy/v", "1",repl,"_" , order[1] ,".png"),
+                    paste0("www/images/sleepstudy/v", "2",repl, "_" , order[2] ,".png"),
+                    paste0("www/images/sleepstudy/v", "1",repl,"_" ,  order[3] , ".png"),
+                    paste0("www/images/sleepstudy/v", "2",repl,"_" ,  order[4], ".png"),
+                    paste0("www/images/sleepstudy/v", "2",repl, "_" , order[1],".png"),
+                    paste0("www/images/sleepstudy/v", "1",repl,"_" ,  order[2] ,".png"),
+                    paste0("www/images/sleepstudy/v", "2",repl, "_" , order[3],  ".png"),
+                    paste0("www/images/sleepstudy/v", "1",repl,"_" ,  order[4], ".png"))
 
     #image.list <- list.files(paste0("www/images"), full.names = T)
     image_list <- sample(image_list, length(image_list))
