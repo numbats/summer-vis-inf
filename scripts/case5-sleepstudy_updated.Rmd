@@ -363,9 +363,9 @@ purrr::map_dfr(1:19, function(i) {
  a <-  data %>%
   select_if((names(data) %in% names(random.effects(m)))) 
  
- for(i in 1:nrfacs)
+ for(p in 1:nrfacs)
  {
-  num[i] <- nrow(unique(a[i]))
+  num[p] <- nrow(unique(a[p]))
  }
   vc <- as.data.frame(VarCorr(m))
   
@@ -440,7 +440,7 @@ lcr_res <- function(data) {
  
  for(i in 1:nrfacs)
  {
-  num[i] <- nrow(unique(a[i]))
+  num[p] <- nrow(unique(a[p]))
  }
   vc <- as.data.frame(VarCorr(m))
   

@@ -19,7 +19,7 @@ sheets_deauth()
 # sheets reauth with specified token and email address
 sheets_auth(
   cache = ".secrets",
-  email = "kjin7@student.monash.edu",
+  email = "abab0012@student.monash.edu",
   token = "data/authentication.rds"
 )
 
