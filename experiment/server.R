@@ -28,7 +28,7 @@ shinyServer(
 
       gs4_auth(
         cache = ".secrets",
-        email = "kjin7@student.monash.edu",
+        email = "abab0012@student.monash.edu",
         token = "data/authentication.rds"
       )
       #gs4_auth(email = "kjin7@student.monash.edu",
@@ -51,57 +51,22 @@ shinyServer(
 
     identifier <- create_unique_id()
 
-    # variates for Latin Square Design
-    variates <- c("A", "B", "C", "D")
 
-    # figures for autism data set
-    aut_lsd <- design.lsd(variates)$sketch
-    aut_first <- sample(1:nrow(aut_lsd),1)
-    d1 <- aut_lsd[-1,-aut_first]
-    r1 <- d1[1,sample(1:nrow(d1),1)]
-    aut_second <- which(aut_lsd[2,] == r1)
-    index1 <- which(d1[1,] == r1)
-    d2 <- d1[-1, -index1]
-    r2 <- d2[1,sample(1:nrow(d2),1)]
-    aut_third <- which(aut_lsd[3,] == r2)
-    index2 <- which(d2[1,] == r2)
-    d3 <- d2[-1, -index2]
-    aut_fourth <- which(aut_lsd[4,] == d3)
 
-    # figures for sleep study
-    sl_lsd <- design.lsd(variates)$sketch
-    sl_first <- sample(1:nrow(sl_lsd),1)
-    d1 <- sl_lsd[-1,-sl_first]
-    r1 <- d1[1,sample(1:nrow(d1),1)]
-    sl_second <- which(sl_lsd[2,] == r1)
-    index1 <- which(d1[1,] == r1)
-    d2 <- d1[-1, -index1]
-    r2 <- d2[1,sample(1:nrow(d2),1)]
-    sl_third <- which(sl_lsd[3,] == r2)
-    index2 <- which(d2[1,] == r2)
-    d3 <- d2[-1, -index2]
-    sl_fourth <- which(sl_lsd[4,] == d3)
-
-    # figures for linguistic study
-    lin_lsd <- design.lsd(variates)$sketch
-    lin_first <- sample(1:nrow(lin_lsd),1)
-    d1 <- lin_lsd[-1,-lin_first]
-    r1 <- d1[1,sample(1:nrow(d1),1)]
-    lin_second <- which(lin_lsd[2,] == r1)
-    index1 <- which(d1[1,] == r1)
-    d2 <- d1[-1, -index1]
-    r2 <- d2[1,sample(1:nrow(d2),1)]
-    lin_third <- which(lin_lsd[3,] == r2)
-    index2 <- which(d2[1,] == r2)
-    d3 <- d2[-1, -index2]
-    lin_fourth <- which(lin_lsd[4,] == d3)
+    seed=sample(1000:2000,1)
+    set.seed(seed)
+    repl <- sample(1:5,1)
 
     # load survey image
     image_list <- c(
-                    paste0("www/images/sleepstudy/v", sample(1:2,1), "1_", sl_first, ".png"),
-                    paste0("www/images/sleepstudy/v", sample(1:2,1), "2_", sl_second, ".png"),
-                    paste0("www/images/sleepstudy/v", sample(1:2,1), "3_", sl_third, ".png"),
-                    paste0("www/images/sleepstudy/v", sample(1:2,1), "4_", sl_fourth, ".png"))
+                    paste0("www/images/sleepstudy/v", "1",repl,  "_1" ,".png"),
+                    paste0("www/images/sleepstudy/v", "2",repl,  "_2" ,".png"),
+                    paste0("www/images/sleepstudy/v", "1",repl, "_3",  ".png"),
+                    paste0("www/images/sleepstudy/v", "2",repl, "_4", ".png"),
+                    paste0("www/images/sleepstudy/v", "2",repl,  "_1" ,".png"),
+                    paste0("www/images/sleepstudy/v", "1",repl,  "_2" ,".png"),
+                    paste0("www/images/sleepstudy/v", "2",repl, "_3",  ".png"),
+                    paste0("www/images/sleepstudy/v", "1",repl, "_4", ".png"))
 
     #image.list <- list.files(paste0("www/images"), full.names = T)
     image_list <- sample(image_list, length(image_list))
