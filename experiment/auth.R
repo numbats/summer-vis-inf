@@ -14,13 +14,13 @@ googlesheets4::sheets_auth()
 list.files(".secrets/")
 
 # deauth
-sheets_deauth()
+gs4_deauth()
 
 # sheets reauth with specified token and email address
 sheets_auth(
   cache = ".secrets",
   email = "abab0012@student.monash.edu",
-  token = "data/authentication.rds"
+  token = "experiment/data/authentication.rds"
 )
 
-saveRDS(sheets_auth(), "data/authentication.rds")
+saveRDS(sheets_auth(), "experiment/data/authentication.rds")

@@ -13,10 +13,16 @@ getInputID <- function(input){
     return()
   }
   c(
-    if(!is.null(input$attribs$id)){list(list(id=input$attribs$id, type = input$name))}else{NULL},
-    do.call("c", map(input$children, getInputID))
+    if(!is.null(input$attribs$id)) {
+      list(list(id = input$attribs$id, type = input$name))
+    } else{
+      NULL
+    },
+    do.call("c", map(input$children, getInputID)
+    )
   )
 }
+
 
 # Define server logic ---
 shinyServer(
@@ -29,11 +35,12 @@ shinyServer(
       gs4_auth(
         cache = ".secrets",
         email = "abab0012@student.monash.edu",
-        token = "data/authentication.rds"
+        token = "experiment/data/authentication.rds"
       )
-      #gs4_auth(email = "kjin7@student.monash.edu",
-               #scopes = "https://www.googleapis.com/auth/spreadsheets")
-      sheet <- gs4_get("1JcmIB5dOi7qkArfGawTkOIVFyKMOU-xxHZRuV_7Kzlw")
+      #gs4_auth(email = "abab0012@student.monash.edu",
+       #        scopes = "https://www.googleapis.com/auth/spreadsheets")
+      sheet <- gs4_get("1X84LWPw0JiH9KslBzCEF4cNGe1hFsmrGJ7IM4PwJIC4")
+      #dataf <- read_sheet("1HekgyCloy5uXZzriqHO_EKFvDXqDV4jAse3DEPfow7A")
     }, error = function(e){
       message("Access has not been granted, please try again in 5 minutes.")
       return(NULL)
@@ -46,28 +53,68 @@ shinyServer(
       pool <- c(letters, LETTERS, 0:9)
 
       this_res <- paste0(sample(pool, char_len, replace = T), collapse = "")
-      this_res
+
+      #person <- sample(expdf$person,1,replace = F)
+     this_res
     }
 
+   expdf <-  tryCatch({
+
+     gs4_auth(
+       cache = ".secrets",
+       email = "abab0012@student.monash.edu",
+       token = "experiment/data/authentication.rds"
+     )
+     #gs4_auth(email = "abab0012@student.monash.edu",
+     #        scopes = "https://www.googleapis.com/auth/spreadsheets")
+     #sheet <- gs4_get("1X84LWPw0JiH9KslBzCEF4cNGe1hFsmrGJ7IM4PwJIC4")
+     expdf <- read_sheet("1HekgyCloy5uXZzriqHO_EKFvDXqDV4jAse3DEPfow7A")
+   }, error = function(e){
+     message("Access has not been granted, please try again in 5 minutes.")
+     return(NULL)
+   })
+
+   expdf$unique_id <- as.character(expdf$unique_id)
     identifier <- create_unique_id()
 
 
+     if(all(expdf$unique_id == 0))
+     {
 
-    seed=sample(1000:2000,1)
-    set.seed(seed)
-    repl <- sample(1:5,1)
-    order <-  sample(1:4,4,replace = F)
+       expdf[which(expdf$person0 == "person01" & expdf$unique_id == 0),]$unique_id <- identifier
+       sheet_write(data = expdf, ss="1HekgyCloy5uXZzriqHO_EKFvDXqDV4jAse3DEPfow7A",sheet = 1)
+     }
+      else
+      {
+       number <- expdf%>%
+          filter(unique_id!=0)%>%
+          nrow()
+       person_num <- number/8
+       expdf[which(expdf$p_id == person_num +1 & expdf$unique_id == 0),]$unique_id <- identifier
+       sheet_write(data = expdf, ss="1HekgyCloy5uXZzriqHO_EKFvDXqDV4jAse3DEPfow7A",sheet = 1)
+
+
+      }
+
+
+
+    filtered <- expdf %>%
+      filter(unique_id==identifier)
+
+
+  #  seed=sample(1000:2000,1)
+   # set.seed(seed)
+    #repl <- sample(1:5,1)
+    #order <-  sample(1:4,4,replace = F)
+
+
+   # <- df[0] ## loop from person1 till person100
+    #image_list <- a %>%
+     # filter(person == personidentifier) %>%
+      #output(lastcolumn)
 
     # load survey image
-    image_list <- c(
-                    paste0("www/images/sleepstudy/v", "1",repl,"_" , order[1] ,".png"),
-                    paste0("www/images/sleepstudy/v", "2",repl, "_" , order[2] ,".png"),
-                    paste0("www/images/sleepstudy/v", "1",repl,"_" ,  order[3] , ".png"),
-                    paste0("www/images/sleepstudy/v", "2",repl,"_" ,  order[4], ".png"),
-                    paste0("www/images/sleepstudy/v", "2",repl, "_" , order[1],".png"),
-                    paste0("www/images/sleepstudy/v", "1",repl,"_" ,  order[2] ,".png"),
-                    paste0("www/images/sleepstudy/v", "2",repl, "_" , order[3],  ".png"),
-                    paste0("www/images/sleepstudy/v", "1",repl,"_" ,  order[4], ".png"))
+    image_list <- c(filtered$image_list)
 
     #image.list <- list.files(paste0("www/images"), full.names = T)
     image_list <- sample(image_list, length(image_list))
@@ -194,7 +241,7 @@ shinyServer(
 
     # change this to upload rows to survey google spreadsheet
     observeEvent(input$btn_export, {
-      if (v$imageNum < 12) {
+      if (v$imageNum < 8) {
         showNotification(h3("Please complete the survey before submitting."),
                          type = "message", duration = 3, closeButton = T)
       } else {
@@ -205,7 +252,9 @@ shinyServer(
         v$responses[[basename(current_img())]][["scene"]]$plot.order <- match(current_img(), image_list)
         v$responses[[basename(current_img())]][["demographic"]] <- demographic_vals()
         v$responses[[basename(current_img())]][["demographic"]]$identifier <- identifier
-        # time calculations
+
+         # time calculations
+
         v$responses[[basename(current_img())]][["scene"]]$time_taken <- (Sys.time() - v$start.time)
         v$responses[[basename(current_img())]][["scene"]]$start.time <- v$start.time
         v$responses[[basename(current_img())]][["scene"]]$end.time <- Sys.time()

@@ -12,6 +12,7 @@ knitr::opts_chunk$set(
 
 ```{r}
 library(edibble)
+library(googledrive)
 
 set.seed(1)
 df <- start_design("Residual diagnostic for multi-level models") %>% 
@@ -19,7 +20,7 @@ df <- start_design("Residual diagnostic for multi-level models") %>%
               data_info = "18 subjects measured over 10 days on reaction time",
               noise = "20% of the mean added to ~33% of participants (=6 participants) for (random) 2 days") %>% 
   set_units(person = 100,
-            question = nested_in(person, 12)) %>% 
+            question = nested_in(person, 8)) %>% 
   set_trts(resid = c("Conditional", "Least-confounded"),
            noise = c("no", "yes"),
            plot = c("QQ-plot", "residual plot"),
@@ -29,6 +30,33 @@ df <- start_design("Residual diagnostic for multi-level models") %>%
   randomise_trts() %>% 
   serve_table()
 
-df
+
+###
+
+library(tidyverse)
+df <- df %>%
+  tsibble::tibble()%>%
+  mutate(
+    num=case_when(
+    str_detect(noise,"no")~1,
+    str_detect(noise,"yes")~2
+ 
+))
+df$version <- regmatches(df$data,regexpr(".$", df$data))
+
+df <- df%>%
+  mutate(
+    order=case_when(
+    str_detect(resid,"Conditional") &str_detect(plot,"residual plot")~1,
+    str_detect(resid,"Conditional") & str_detect(plot,"QQ-plot")~2,
+    str_detect(resid,"Least-confounded") & str_detect(plot,"QQ-plot")~3,
+    str_detect(resid,"Least-confounded") & str_detect(plot,"residual plot")~4
+    ))
+
+df <- df %>%
+  mutate(image_list=paste0("www/images/sleepstudy/v",num,version ,"_" , order ,".png"))
+####
+
+
 ```
 
