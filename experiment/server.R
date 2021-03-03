@@ -31,7 +31,7 @@ shinyServer(
     # check connection to google sheet
 
     sheet <- tryCatch({
-
+ ## survey answers
       gs4_auth(
         cache = ".secrets",
         email = "abab0012@student.monash.edu",
@@ -58,7 +58,7 @@ shinyServer(
      this_res
     }
 
-   expdf <-  tryCatch({
+   expdf <-  tryCatch({ # unique person id
 
      gs4_auth(
        cache = ".secrets",
@@ -87,7 +87,7 @@ shinyServer(
       else
       {
        number <- expdf%>%
-          filter(unique_id!=0)%>%
+          dplyr::filter(unique_id!=0)%>%
           nrow()
        person_num <- number/8
        expdf[which(expdf$p_id == person_num +1 & expdf$unique_id == 0),]$unique_id <- identifier
@@ -99,7 +99,7 @@ shinyServer(
 
 
     filtered <- expdf %>%
-      filter(unique_id==identifier)
+      dplyr::filter(unique_id==identifier)
 
 
   #  seed=sample(1000:2000,1)
