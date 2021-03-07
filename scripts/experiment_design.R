@@ -1,22 +1,29 @@
 library(edibble)
 
 
-set.seed(1)
 expdf <- start_design("Residual diagnostic for multi-level models") %>%
   set_context(data_source = "lme4::sleepstudy",
               data_info = "18 subjects measured over 10 days on reaction time",
               noise = "20% of the mean added to ~33% of participants (=6 participants) for (random) 2 days") %>%
   set_units(person0 = 100,
-            question = nested_in(person0, 8)) %>%
-  set_trts(resid = c("Conditional", "Least-confounded"),
-           noise = c("no", "yes"),
-           plot = c("QQ-plot", "residual plot"),
+            question = nested_in(person0, 9)) %>%
+  set_trts(trt = c("Conditional,no,QQ-plot",
+                   "Least-confounded,no,QQ-plot",
+                   "Conditional,yes,QQ-plot",
+                   "Least-confounded,yes,QQ-plot",
+                   "Conditional,no,residual plot",
+                   "Least-confounded,no,residual plot",
+                   "Conditional,yes,residual plot",
+                   "Least-confounded,yes,residual plot",
+                   "control,control,control"),
            data = c("rep1", "rep2", "rep3", "rep4", "rep5")) %>%
-  allocate_trts(resid:noise:plot ~ question,
-                data ~ person0) %>%
+  allocate_trts( trt ~ question,
+                 data ~ person0) %>%
   randomise_trts() %>%
   serve_table()
 
+expdf <- expdf %>%
+  tidyr::separate(trt, c("resid", "noise", "plot"), sep = ",")
 
 ###
 
@@ -49,7 +56,7 @@ expdf$unique_id <- as.character(expdf$unique_id)
 
 write.csv(expdf,file = "experiment/data/experiment.csv")
 
-#googlesheets4::sheet_write(df)
+#googlesheets4::sheet_write(expdf)
 
 ssid <- as_sheets_id("https://docs.google.com/spreadsheets/d/1HekgyCloy5uXZzriqHO_EKFvDXqDV4jAse3DEPfow7A/edit#gid=1756982656")
 class(ssid)
