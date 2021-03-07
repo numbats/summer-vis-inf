@@ -74,7 +74,7 @@ shinyServer(
      return(NULL)
    })
 
-   expdf$unique_id <- as.character(expdf$unique_id)
+   expdf$unique_id <-  as.character(expdf$unique_id)
     identifier <- create_unique_id()
 
 
@@ -176,7 +176,7 @@ shinyServer(
       else {
         div(
           p("Thank you for your participation"),
-          p("Please click the SUBMIT botton at the top of the window.")
+          p("Please click the SUBMIT button at the top of the window.")
         )
       }
     })

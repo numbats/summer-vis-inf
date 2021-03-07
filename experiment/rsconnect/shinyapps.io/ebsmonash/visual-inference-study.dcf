@@ -1,0 +1,12 @@
+name: visual-inference-study
+title: visual-inference-study
+username:
+account: ebsmonash
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3749478
+bundleId: 4312479
+url: https://ebsmonash.shinyapps.io/visual-inference-study/
+when: 1615125049.63783
+asMultiple: FALSE
+asStatic: FALSE
