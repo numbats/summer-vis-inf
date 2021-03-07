@@ -27,7 +27,7 @@ sidebar <- dashboardSidebar(
              status = "info")
     )
   )
-  
+
 )
 
 shinyUI(
@@ -35,7 +35,7 @@ shinyUI(
     dashboardHeader(
       title = "reading plots",
       tags$li(class = "dropdown", actionLink("btn_export", span(icon("save"), "Submit Survey")))
-    ),  
+    ),
     sidebar,
     dashboardBody(
       tabItems(
@@ -44,13 +44,13 @@ shinyUI(
                   title = "Demographics",
                   questions$demographics,
                   div(uiOutput("ui_d_save")),
-                  width = 12,
+                  width = 14,
                   status = "info",
                   solidHeader = TRUE,
                   collapsible = TRUE
                 )
         ),
-        
+
         tabItem(tabName = "Questions",
                 includeCSS("www/taipan.css"),
                 includeScript("www/img_size.js"),
@@ -64,7 +64,7 @@ shinyUI(
                   solidHeader = TRUE,
                   collapsible = F
                 )),
-        
+
         tabItem(tabName = "Thank_you",
                 box(
                   title = "Thank you",
@@ -76,7 +76,7 @@ shinyUI(
                   collapsible = TRUE
                 )
         )
-        
+
       )
     )
   )

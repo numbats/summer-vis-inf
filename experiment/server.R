@@ -186,6 +186,7 @@ shinyServer(
       updateSelectInput(session = session, "choice", selected = 0)
       updateSelectInput(session = session, "reason", selected = 0)
       updateSelectInput(session = session, "certainty", selected = 3)
+
     })
 
     observeEvent(scene_vals(), {
@@ -241,7 +242,7 @@ shinyServer(
 
     # change this to upload rows to survey google spreadsheet
     observeEvent(input$btn_export, {
-      if (v$imageNum < 8) {
+      if (v$imageNum < 9) {
         showNotification(h3("Please complete the survey before submitting."),
                          type = "message", duration = 3, closeButton = T)
       } else {

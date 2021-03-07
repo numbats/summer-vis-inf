@@ -7,6 +7,11 @@ surveyQuestions <- function(demographics, scene){
 questions <- surveyQuestions(
   demographics =
     div(
+      p("If you are attempting the survey through Appen service, kindly provide your 12 digit ID to process your payment"),
+      #ID
+      textInput("ID", "Please provide your Appen ID",
+                placeholder = "Twelve digit ID"),
+
       # Name
       textInput("name", "Please provide your name:",
                 placeholder = "Name"),
