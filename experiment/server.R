@@ -68,7 +68,7 @@ shinyServer(
      #gs4_auth(email = "abab0012@student.monash.edu",
      #        scopes = "https://www.googleapis.com/auth/spreadsheets")
      #sheet <- gs4_get("1X84LWPw0JiH9KslBzCEF4cNGe1hFsmrGJ7IM4PwJIC4")
-     expdf <- read_sheet("1HekgyCloy5uXZzriqHO_EKFvDXqDV4jAse3DEPfow7A")
+     expdf <- read_sheet("1lh_YNT19KoaJm9hyBAHFuHDGhTdNO7pFhkLOpWxX5YI")
    }, error = function(e){
      message("Access has not been granted, please try again in 5 minutes.")
      return(NULL)
@@ -78,21 +78,20 @@ shinyServer(
     identifier <- create_unique_id()
 
 
-     if(all(expdf$unique_id == 0))
+     if(all(expdf$unique_id == "0"))
      {
 
        expdf[which(expdf$person0 == "person01" & expdf$unique_id == 0),]$unique_id <- identifier
-       sheet_write(data = expdf, ss="1HekgyCloy5uXZzriqHO_EKFvDXqDV4jAse3DEPfow7A",sheet = 1)
+       sheet_write(data = expdf, ss="1lh_YNT19KoaJm9hyBAHFuHDGhTdNO7pFhkLOpWxX5YI",sheet = 1)
      }
       else
       {
        number <- expdf%>%
-          dplyr::filter(unique_id!=0)%>%
+          dplyr::filter(unique_id!="0")%>%
           nrow()
-       person_num <- number/8
+       person_num <- number/9
        expdf[which(expdf$p_id == person_num +1 & expdf$unique_id == 0),]$unique_id <- identifier
-       sheet_write(data = expdf, ss="1HekgyCloy5uXZzriqHO_EKFvDXqDV4jAse3DEPfow7A",sheet = 1)
-
+       sheet_write(data = expdf, ss="1lh_YNT19KoaJm9hyBAHFuHDGhTdNO7pFhkLOpWxX5YI",sheet = 1)
 
       }
 
