@@ -14,10 +14,209 @@ library(stringr)
 ```
 
 
+```{r data}
+
+pilot_survey_results <-
+  read_csv(here::here("data/pilot_survey_results.csv"))
+images_allocation <-
+  read_csv(here::here("data/images_allocation.csv"))
+
+images_allocation <- images_allocation %>% mutate(assigned_plot = paste0("v", plot_num, version , "_" , plot_order, ".png")) %>%
+  select(-c(1,8:11))
+
+correct <- c(
+  "v11_1.png" = 3,
+  "v11_2.png" = 1,
+  "v11_3.png" = 7,
+  "v11_4.png" = 5,
+  
+  "v12_1.png" = 5,
+  "v12_2.png" = 2,
+  "v12_3.png" = 8,
+  "v12_4.png" = 1,
+  
+  "v13_1.png" = 2,
+  "v13_2.png" = 5,
+  "v13_3.png" = 9,
+  "v13_4.png" = 6,
+  
+  "v14_1.png" = 10,
+  "v14_2.png" = 4,
+  "v14_3.png" = 9,
+  "v14_4.png" = 10,
+  
+  "v15_1.png" = 7,
+  "v15_2.png" = 3,
+  "v15_3.png" = 10,
+  "v15_4.png" = 13,
+  
+  "vNA1_NA.png" = 8,
+  "vNA2_NA.png" = 8,
+  "vNA3_NA.png" = 8,
+  "vNA4_NA.png" = 8,
+  
+  
+  "v21_1.png" = 1,
+  "v21_2.png" = 4,
+  "v21_3.png" = 14,
+  "v21_4.png" = 6,
+  
+  "v22_1.png" = 6,
+  "v22_2.png" = 14,
+  "v22_3.png" = 3,
+  "v22_4.png" = 11,
+  
+  "v23_1.png" = 3,
+  "v23_2.png" = 7,
+  "v23_3.png" = 5,
+  "v23_4.png" = 12,
+  
+  
+  "v24_1.png" = 6,
+  "v24_2.png" = 14,
+  "v24_3.png" = 3,
+  "v24_4.png" = 16,
+  
+  
+  "v25_1.png" = 6,
+  "v25_2.png" = 14,
+  "v25_3.png" = 3,
+  "v25_4.png" = 13
+)
+
+true_plots <- tibble(
+  plot_name = c(
+    "v11_1.png",
+    "v11_2.png",
+    "v11_3.png",
+    "v11_4.png",
+    
+    "v12_1.png",
+    "v12_2.png",
+    "v12_3.png",
+    "v12_4.png",
+    
+    "v13_1.png",
+    "v13_2.png",
+    "v13_3.png",
+    "v13_4.png",
+    
+    "v14_1.png",
+    "v14_2.png",
+    "v14_3.png",
+    "v14_4.png",
+    
+    "v15_1.png",
+    "v15_2.png",
+    "v15_3.png",
+    "v15_4.png",
+    
+    "vNA1_NA.png",
+    "vNA2_NA.png",
+    "vNA3_NA.png",
+    "vNA4_NA.png",
+    
+    
+    "v21_1.png",
+    "v21_2.png",
+    "v21_3.png",
+    "v21_4.png",
+    
+    "v22_1.png",
+    "v22_2.png",
+    "v22_3.png",
+    "v22_4.png",
+    
+    "v23_1.png",
+    "v23_2.png",
+    "v23_3.png",
+    "v23_4.png",
+    
+    
+    "v24_1.png",
+    "v24_2.png",
+    "v24_3.png",
+    "v24_4.png",
+    
+    
+    "v25_1.png",
+    "v25_2.png",
+    "v25_3.png",
+    "v25_4.png"
+  ),
+  true_plot = c(
+    3,
+    1,
+    7,
+    5,
+    
+    5,
+    2,
+    8,
+    1,
+    
+    2,
+    5,
+    9,
+    6,
+    
+    10,
+    4,
+    9,
+    10,
+    
+    7,
+    3,
+    10,
+    13,
+    
+    8,
+    8,
+    8,
+    8,
+    
+    
+    1,
+    4,
+    14,
+    6,
+    
+    6,
+    14,
+    3,
+    11,
+    
+    3,
+    7,
+    5,
+    12,
+    
+    
+    6,
+    14,
+    3,
+    16,
+    
+    6,
+    14,
+    3,
+    13
+  )
+)
+```
+
 ```{r}
 
-pilot_survey_results <- read_csv("data/pilot_survey_results.csv")
-images_allocation <- read_csv("data/images_allocation.csv")
+images_allocation <- images_allocation %>%
+  left_join(true_plots,by=c("assigned_plot"="plot_name"))
+
+data <- pilot_survey_results %>%
+  left_join(images_allocation, by = c(c("identifier" = "unique_id"),c("plot"="assigned_plot")))
 
 ```
+
+```{r}
+
+```
+
 
