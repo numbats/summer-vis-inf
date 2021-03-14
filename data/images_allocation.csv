@@ -1,0 +1,901 @@
+...1,person0,question,resid,noise,plot,data,plot_num,version,p_id,plot_order,image_list,unique_id
+1,person01,question1,Conditional,yes,QQ-plot,rep3,2,3,1,2,www/images/sleepstudy/v23_2.png,tiYu2iT
+2,person01,question2,Least-confounded,no,QQ-plot,rep3,1,3,1,3,www/images/sleepstudy/v13_3.png,tiYu2iT
+3,person01,question3,Least-confounded,yes,residual plot,rep3,2,3,1,4,www/images/sleepstudy/v23_4.png,tiYu2iT
+4,person01,question4,control,control,control,rep3,NA,3,1,NA,www/images/sleepstudy/vNA3_NA.png,tiYu2iT
+5,person01,question5,Conditional,no,residual plot,rep3,1,3,1,1,www/images/sleepstudy/v13_1.png,tiYu2iT
+6,person01,question6,Least-confounded,no,residual plot,rep3,1,3,1,4,www/images/sleepstudy/v13_4.png,tiYu2iT
+7,person01,question7,Conditional,yes,residual plot,rep3,2,3,1,1,www/images/sleepstudy/v23_1.png,tiYu2iT
+8,person01,question8,Conditional,no,QQ-plot,rep3,1,3,1,2,www/images/sleepstudy/v13_2.png,tiYu2iT
+9,person01,question9,Least-confounded,yes,QQ-plot,rep3,2,3,1,3,www/images/sleepstudy/v23_3.png,tiYu2iT
+10,person02,question10,Conditional,no,residual plot,rep1,1,1,2,1,www/images/sleepstudy/v11_1.png,mVAo0U2
+11,person02,question11,Least-confounded,yes,QQ-plot,rep1,2,1,2,3,www/images/sleepstudy/v21_3.png,mVAo0U2
+12,person02,question12,Least-confounded,no,residual plot,rep1,1,1,2,4,www/images/sleepstudy/v11_4.png,mVAo0U2
+13,person02,question13,Conditional,yes,residual plot,rep1,2,1,2,1,www/images/sleepstudy/v21_1.png,mVAo0U2
+14,person02,question14,control,control,control,rep1,NA,1,2,NA,www/images/sleepstudy/vNA1_NA.png,mVAo0U2
+15,person02,question15,Conditional,no,QQ-plot,rep1,1,1,2,2,www/images/sleepstudy/v11_2.png,mVAo0U2
+16,person02,question16,Least-confounded,yes,residual plot,rep1,2,1,2,4,www/images/sleepstudy/v21_4.png,mVAo0U2
+17,person02,question17,Least-confounded,no,QQ-plot,rep1,1,1,2,3,www/images/sleepstudy/v11_3.png,mVAo0U2
+18,person02,question18,Conditional,yes,QQ-plot,rep1,2,1,2,2,www/images/sleepstudy/v21_2.png,mVAo0U2
+19,person03,question19,Least-confounded,yes,residual plot,rep2,2,2,3,4,www/images/sleepstudy/v22_4.png,a2PEWM1
+20,person03,question20,Least-confounded,no,residual plot,rep2,1,2,3,4,www/images/sleepstudy/v12_4.png,a2PEWM1
+21,person03,question21,Conditional,yes,QQ-plot,rep2,2,2,3,2,www/images/sleepstudy/v22_2.png,a2PEWM1
+22,person03,question22,Least-confounded,yes,QQ-plot,rep2,2,2,3,3,www/images/sleepstudy/v22_3.png,a2PEWM1
+23,person03,question23,Least-confounded,no,QQ-plot,rep2,1,2,3,3,www/images/sleepstudy/v12_3.png,a2PEWM1
+24,person03,question24,Conditional,no,residual plot,rep2,1,2,3,1,www/images/sleepstudy/v12_1.png,a2PEWM1
+25,person03,question25,control,control,control,rep2,NA,2,3,NA,www/images/sleepstudy/vNA2_NA.png,a2PEWM1
+26,person03,question26,Conditional,no,QQ-plot,rep2,1,2,3,2,www/images/sleepstudy/v12_2.png,a2PEWM1
+27,person03,question27,Conditional,yes,residual plot,rep2,2,2,3,1,www/images/sleepstudy/v22_1.png,a2PEWM1
+28,person04,question28,Conditional,no,residual plot,rep2,1,2,4,1,www/images/sleepstudy/v12_1.png,Np1ovFF
+29,person04,question29,Conditional,yes,residual plot,rep2,2,2,4,1,www/images/sleepstudy/v22_1.png,Np1ovFF
+30,person04,question30,Least-confounded,yes,QQ-plot,rep2,2,2,4,3,www/images/sleepstudy/v22_3.png,Np1ovFF
+31,person04,question31,Least-confounded,yes,residual plot,rep2,2,2,4,4,www/images/sleepstudy/v22_4.png,Np1ovFF
+32,person04,question32,Least-confounded,no,QQ-plot,rep2,1,2,4,3,www/images/sleepstudy/v12_3.png,Np1ovFF
+33,person04,question33,Least-confounded,no,residual plot,rep2,1,2,4,4,www/images/sleepstudy/v12_4.png,Np1ovFF
+34,person04,question34,control,control,control,rep2,NA,2,4,NA,www/images/sleepstudy/vNA2_NA.png,Np1ovFF
+35,person04,question35,Conditional,yes,QQ-plot,rep2,2,2,4,2,www/images/sleepstudy/v22_2.png,Np1ovFF
+36,person04,question36,Conditional,no,QQ-plot,rep2,1,2,4,2,www/images/sleepstudy/v12_2.png,Np1ovFF
+37,person05,question37,Least-confounded,no,residual plot,rep4,1,4,5,4,www/images/sleepstudy/v14_4.png,KJtZ4aK
+38,person05,question38,Conditional,no,QQ-plot,rep4,1,4,5,2,www/images/sleepstudy/v14_2.png,KJtZ4aK
+39,person05,question39,Conditional,yes,residual plot,rep4,2,4,5,1,www/images/sleepstudy/v24_1.png,KJtZ4aK
+40,person05,question40,Least-confounded,no,QQ-plot,rep4,1,4,5,3,www/images/sleepstudy/v14_3.png,KJtZ4aK
+41,person05,question41,Least-confounded,yes,residual plot,rep4,2,4,5,4,www/images/sleepstudy/v24_4.png,KJtZ4aK
+42,person05,question42,Conditional,yes,QQ-plot,rep4,2,4,5,2,www/images/sleepstudy/v24_2.png,KJtZ4aK
+43,person05,question43,Least-confounded,yes,QQ-plot,rep4,2,4,5,3,www/images/sleepstudy/v24_3.png,KJtZ4aK
+44,person05,question44,control,control,control,rep4,NA,4,5,NA,www/images/sleepstudy/vNA4_NA.png,KJtZ4aK
+45,person05,question45,Conditional,no,residual plot,rep4,1,4,5,1,www/images/sleepstudy/v14_1.png,KJtZ4aK
+46,person06,question46,control,control,control,rep2,NA,2,6,NA,www/images/sleepstudy/vNA2_NA.png,FkInLN9
+47,person06,question47,Conditional,yes,QQ-plot,rep2,2,2,6,2,www/images/sleepstudy/v22_2.png,FkInLN9
+48,person06,question48,Least-confounded,yes,QQ-plot,rep2,2,2,6,3,www/images/sleepstudy/v22_3.png,FkInLN9
+49,person06,question49,Conditional,no,QQ-plot,rep2,1,2,6,2,www/images/sleepstudy/v12_2.png,FkInLN9
+50,person06,question50,Conditional,yes,residual plot,rep2,2,2,6,1,www/images/sleepstudy/v22_1.png,FkInLN9
+51,person06,question51,Conditional,no,residual plot,rep2,1,2,6,1,www/images/sleepstudy/v12_1.png,FkInLN9
+52,person06,question52,Least-confounded,yes,residual plot,rep2,2,2,6,4,www/images/sleepstudy/v22_4.png,FkInLN9
+53,person06,question53,Least-confounded,no,QQ-plot,rep2,1,2,6,3,www/images/sleepstudy/v12_3.png,FkInLN9
+54,person06,question54,Least-confounded,no,residual plot,rep2,1,2,6,4,www/images/sleepstudy/v12_4.png,FkInLN9
+55,person07,question55,Conditional,yes,residual plot,rep5,2,5,7,1,www/images/sleepstudy/v25_1.png,8UFQaQ7
+56,person07,question56,Least-confounded,yes,residual plot,rep5,2,5,7,4,www/images/sleepstudy/v25_4.png,8UFQaQ7
+57,person07,question57,Least-confounded,no,QQ-plot,rep5,1,5,7,3,www/images/sleepstudy/v15_3.png,8UFQaQ7
+58,person07,question58,Conditional,yes,QQ-plot,rep5,2,5,7,2,www/images/sleepstudy/v25_2.png,8UFQaQ7
+59,person07,question59,Least-confounded,no,residual plot,rep5,1,5,7,4,www/images/sleepstudy/v15_4.png,8UFQaQ7
+60,person07,question60,Conditional,no,QQ-plot,rep5,1,5,7,2,www/images/sleepstudy/v15_2.png,8UFQaQ7
+61,person07,question61,control,control,control,rep5,NA,5,7,NA,www/images/sleepstudy/vNA5_NA.png,8UFQaQ7
+62,person07,question62,Conditional,no,residual plot,rep5,1,5,7,1,www/images/sleepstudy/v15_1.png,8UFQaQ7
+63,person07,question63,Least-confounded,yes,QQ-plot,rep5,2,5,7,3,www/images/sleepstudy/v25_3.png,8UFQaQ7
+64,person08,question64,Conditional,yes,QQ-plot,rep4,2,4,8,2,www/images/sleepstudy/v24_2.png,nHp780B
+65,person08,question65,Conditional,yes,residual plot,rep4,2,4,8,1,www/images/sleepstudy/v24_1.png,nHp780B
+66,person08,question66,Least-confounded,yes,residual plot,rep4,2,4,8,4,www/images/sleepstudy/v24_4.png,nHp780B
+67,person08,question67,Conditional,no,residual plot,rep4,1,4,8,1,www/images/sleepstudy/v14_1.png,nHp780B
+68,person08,question68,Conditional,no,QQ-plot,rep4,1,4,8,2,www/images/sleepstudy/v14_2.png,nHp780B
+69,person08,question69,Least-confounded,yes,QQ-plot,rep4,2,4,8,3,www/images/sleepstudy/v24_3.png,nHp780B
+70,person08,question70,Least-confounded,no,QQ-plot,rep4,1,4,8,3,www/images/sleepstudy/v14_3.png,nHp780B
+71,person08,question71,Least-confounded,no,residual plot,rep4,1,4,8,4,www/images/sleepstudy/v14_4.png,nHp780B
+72,person08,question72,control,control,control,rep4,NA,4,8,NA,www/images/sleepstudy/vNA4_NA.png,nHp780B
+73,person09,question73,Conditional,no,QQ-plot,rep5,1,5,9,2,www/images/sleepstudy/v15_2.png,AGPu88x
+74,person09,question74,Least-confounded,yes,QQ-plot,rep5,2,5,9,3,www/images/sleepstudy/v25_3.png,AGPu88x
+75,person09,question75,Least-confounded,no,QQ-plot,rep5,1,5,9,3,www/images/sleepstudy/v15_3.png,AGPu88x
+76,person09,question76,control,control,control,rep5,NA,5,9,NA,www/images/sleepstudy/vNA5_NA.png,AGPu88x
+77,person09,question77,Conditional,yes,residual plot,rep5,2,5,9,1,www/images/sleepstudy/v25_1.png,AGPu88x
+78,person09,question78,Conditional,no,residual plot,rep5,1,5,9,1,www/images/sleepstudy/v15_1.png,AGPu88x
+79,person09,question79,Conditional,yes,QQ-plot,rep5,2,5,9,2,www/images/sleepstudy/v25_2.png,AGPu88x
+80,person09,question80,Least-confounded,yes,residual plot,rep5,2,5,9,4,www/images/sleepstudy/v25_4.png,AGPu88x
+81,person09,question81,Least-confounded,no,residual plot,rep5,1,5,9,4,www/images/sleepstudy/v15_4.png,AGPu88x
+82,person010,question82,control,control,control,rep5,NA,5,10,NA,www/images/sleepstudy/vNA5_NA.png,OXJDDbH
+83,person010,question83,Conditional,yes,residual plot,rep5,2,5,10,1,www/images/sleepstudy/v25_1.png,OXJDDbH
+84,person010,question84,Least-confounded,yes,residual plot,rep5,2,5,10,4,www/images/sleepstudy/v25_4.png,OXJDDbH
+85,person010,question85,Least-confounded,yes,QQ-plot,rep5,2,5,10,3,www/images/sleepstudy/v25_3.png,OXJDDbH
+86,person010,question86,Conditional,no,QQ-plot,rep5,1,5,10,2,www/images/sleepstudy/v15_2.png,OXJDDbH
+87,person010,question87,Conditional,no,residual plot,rep5,1,5,10,1,www/images/sleepstudy/v15_1.png,OXJDDbH
+88,person010,question88,Conditional,yes,QQ-plot,rep5,2,5,10,2,www/images/sleepstudy/v25_2.png,OXJDDbH
+89,person010,question89,Least-confounded,no,residual plot,rep5,1,5,10,4,www/images/sleepstudy/v15_4.png,OXJDDbH
+90,person010,question90,Least-confounded,no,QQ-plot,rep5,1,5,10,3,www/images/sleepstudy/v15_3.png,OXJDDbH
+91,person011,question91,Least-confounded,yes,QQ-plot,rep3,2,3,11,3,www/images/sleepstudy/v23_3.png,oIOmqgi
+92,person011,question92,Conditional,yes,QQ-plot,rep3,2,3,11,2,www/images/sleepstudy/v23_2.png,oIOmqgi
+93,person011,question93,Least-confounded,no,residual plot,rep3,1,3,11,4,www/images/sleepstudy/v13_4.png,oIOmqgi
+94,person011,question94,control,control,control,rep3,NA,3,11,NA,www/images/sleepstudy/vNA3_NA.png,oIOmqgi
+95,person011,question95,Least-confounded,no,QQ-plot,rep3,1,3,11,3,www/images/sleepstudy/v13_3.png,oIOmqgi
+96,person011,question96,Conditional,yes,residual plot,rep3,2,3,11,1,www/images/sleepstudy/v23_1.png,oIOmqgi
+97,person011,question97,Least-confounded,yes,residual plot,rep3,2,3,11,4,www/images/sleepstudy/v23_4.png,oIOmqgi
+98,person011,question98,Conditional,no,QQ-plot,rep3,1,3,11,2,www/images/sleepstudy/v13_2.png,oIOmqgi
+99,person011,question99,Conditional,no,residual plot,rep3,1,3,11,1,www/images/sleepstudy/v13_1.png,oIOmqgi
+100,person012,question100,Least-confounded,yes,residual plot,rep2,2,2,12,4,www/images/sleepstudy/v22_4.png,a4PL9c1
+101,person012,question101,Least-confounded,no,residual plot,rep2,1,2,12,4,www/images/sleepstudy/v12_4.png,a4PL9c1
+102,person012,question102,control,control,control,rep2,NA,2,12,NA,www/images/sleepstudy/vNA2_NA.png,a4PL9c1
+103,person012,question103,Least-confounded,yes,QQ-plot,rep2,2,2,12,3,www/images/sleepstudy/v22_3.png,a4PL9c1
+104,person012,question104,Conditional,yes,residual plot,rep2,2,2,12,1,www/images/sleepstudy/v22_1.png,a4PL9c1
+105,person012,question105,Conditional,yes,QQ-plot,rep2,2,2,12,2,www/images/sleepstudy/v22_2.png,a4PL9c1
+106,person012,question106,Least-confounded,no,QQ-plot,rep2,1,2,12,3,www/images/sleepstudy/v12_3.png,a4PL9c1
+107,person012,question107,Conditional,no,residual plot,rep2,1,2,12,1,www/images/sleepstudy/v12_1.png,a4PL9c1
+108,person012,question108,Conditional,no,QQ-plot,rep2,1,2,12,2,www/images/sleepstudy/v12_2.png,a4PL9c1
+109,person013,question109,Least-confounded,yes,residual plot,rep4,2,4,13,4,www/images/sleepstudy/v24_4.png,1ghtIPE
+110,person013,question110,control,control,control,rep4,NA,4,13,NA,www/images/sleepstudy/vNA4_NA.png,1ghtIPE
+111,person013,question111,Least-confounded,no,residual plot,rep4,1,4,13,4,www/images/sleepstudy/v14_4.png,1ghtIPE
+112,person013,question112,Conditional,no,QQ-plot,rep4,1,4,13,2,www/images/sleepstudy/v14_2.png,1ghtIPE
+113,person013,question113,Least-confounded,no,QQ-plot,rep4,1,4,13,3,www/images/sleepstudy/v14_3.png,1ghtIPE
+114,person013,question114,Least-confounded,yes,QQ-plot,rep4,2,4,13,3,www/images/sleepstudy/v24_3.png,1ghtIPE
+115,person013,question115,Conditional,yes,QQ-plot,rep4,2,4,13,2,www/images/sleepstudy/v24_2.png,1ghtIPE
+116,person013,question116,Conditional,yes,residual plot,rep4,2,4,13,1,www/images/sleepstudy/v24_1.png,1ghtIPE
+117,person013,question117,Conditional,no,residual plot,rep4,1,4,13,1,www/images/sleepstudy/v14_1.png,1ghtIPE
+118,person014,question118,Conditional,yes,QQ-plot,rep5,2,5,14,2,www/images/sleepstudy/v25_2.png,sDV3Hwt
+119,person014,question119,Least-confounded,yes,QQ-plot,rep5,2,5,14,3,www/images/sleepstudy/v25_3.png,sDV3Hwt
+120,person014,question120,Least-confounded,yes,residual plot,rep5,2,5,14,4,www/images/sleepstudy/v25_4.png,sDV3Hwt
+121,person014,question121,Conditional,yes,residual plot,rep5,2,5,14,1,www/images/sleepstudy/v25_1.png,sDV3Hwt
+122,person014,question122,control,control,control,rep5,NA,5,14,NA,www/images/sleepstudy/vNA5_NA.png,sDV3Hwt
+123,person014,question123,Conditional,no,residual plot,rep5,1,5,14,1,www/images/sleepstudy/v15_1.png,sDV3Hwt
+124,person014,question124,Least-confounded,no,residual plot,rep5,1,5,14,4,www/images/sleepstudy/v15_4.png,sDV3Hwt
+125,person014,question125,Least-confounded,no,QQ-plot,rep5,1,5,14,3,www/images/sleepstudy/v15_3.png,sDV3Hwt
+126,person014,question126,Conditional,no,QQ-plot,rep5,1,5,14,2,www/images/sleepstudy/v15_2.png,sDV3Hwt
+127,person015,question127,Conditional,yes,QQ-plot,rep4,2,4,15,2,www/images/sleepstudy/v24_2.png,kS8dxBS
+128,person015,question128,Least-confounded,no,residual plot,rep4,1,4,15,4,www/images/sleepstudy/v14_4.png,kS8dxBS
+129,person015,question129,control,control,control,rep4,NA,4,15,NA,www/images/sleepstudy/vNA4_NA.png,kS8dxBS
+130,person015,question130,Least-confounded,yes,residual plot,rep4,2,4,15,4,www/images/sleepstudy/v24_4.png,kS8dxBS
+131,person015,question131,Conditional,no,QQ-plot,rep4,1,4,15,2,www/images/sleepstudy/v14_2.png,kS8dxBS
+132,person015,question132,Least-confounded,no,QQ-plot,rep4,1,4,15,3,www/images/sleepstudy/v14_3.png,kS8dxBS
+133,person015,question133,Conditional,no,residual plot,rep4,1,4,15,1,www/images/sleepstudy/v14_1.png,kS8dxBS
+134,person015,question134,Least-confounded,yes,QQ-plot,rep4,2,4,15,3,www/images/sleepstudy/v24_3.png,kS8dxBS
+135,person015,question135,Conditional,yes,residual plot,rep4,2,4,15,1,www/images/sleepstudy/v24_1.png,kS8dxBS
+136,person016,question136,Least-confounded,no,QQ-plot,rep3,1,3,16,3,www/images/sleepstudy/v13_3.png,0
+137,person016,question137,Least-confounded,yes,QQ-plot,rep3,2,3,16,3,www/images/sleepstudy/v23_3.png,0
+138,person016,question138,Conditional,no,QQ-plot,rep3,1,3,16,2,www/images/sleepstudy/v13_2.png,0
+139,person016,question139,Conditional,yes,residual plot,rep3,2,3,16,1,www/images/sleepstudy/v23_1.png,0
+140,person016,question140,Conditional,no,residual plot,rep3,1,3,16,1,www/images/sleepstudy/v13_1.png,0
+141,person016,question141,Least-confounded,no,residual plot,rep3,1,3,16,4,www/images/sleepstudy/v13_4.png,0
+142,person016,question142,control,control,control,rep3,NA,3,16,NA,www/images/sleepstudy/vNA3_NA.png,0
+143,person016,question143,Least-confounded,yes,residual plot,rep3,2,3,16,4,www/images/sleepstudy/v23_4.png,0
+144,person016,question144,Conditional,yes,QQ-plot,rep3,2,3,16,2,www/images/sleepstudy/v23_2.png,0
+145,person017,question145,Least-confounded,yes,residual plot,rep4,2,4,17,4,www/images/sleepstudy/v24_4.png,0
+146,person017,question146,Least-confounded,yes,QQ-plot,rep4,2,4,17,3,www/images/sleepstudy/v24_3.png,0
+147,person017,question147,control,control,control,rep4,NA,4,17,NA,www/images/sleepstudy/vNA4_NA.png,0
+148,person017,question148,Least-confounded,no,QQ-plot,rep4,1,4,17,3,www/images/sleepstudy/v14_3.png,0
+149,person017,question149,Conditional,yes,QQ-plot,rep4,2,4,17,2,www/images/sleepstudy/v24_2.png,0
+150,person017,question150,Conditional,no,residual plot,rep4,1,4,17,1,www/images/sleepstudy/v14_1.png,0
+151,person017,question151,Conditional,no,QQ-plot,rep4,1,4,17,2,www/images/sleepstudy/v14_2.png,0
+152,person017,question152,Conditional,yes,residual plot,rep4,2,4,17,1,www/images/sleepstudy/v24_1.png,0
+153,person017,question153,Least-confounded,no,residual plot,rep4,1,4,17,4,www/images/sleepstudy/v14_4.png,0
+154,person018,question154,Least-confounded,no,residual plot,rep1,1,1,18,4,www/images/sleepstudy/v11_4.png,0
+155,person018,question155,Least-confounded,yes,residual plot,rep1,2,1,18,4,www/images/sleepstudy/v21_4.png,0
+156,person018,question156,Conditional,yes,QQ-plot,rep1,2,1,18,2,www/images/sleepstudy/v21_2.png,0
+157,person018,question157,Least-confounded,no,QQ-plot,rep1,1,1,18,3,www/images/sleepstudy/v11_3.png,0
+158,person018,question158,Least-confounded,yes,QQ-plot,rep1,2,1,18,3,www/images/sleepstudy/v21_3.png,0
+159,person018,question159,control,control,control,rep1,NA,1,18,NA,www/images/sleepstudy/vNA1_NA.png,0
+160,person018,question160,Conditional,no,QQ-plot,rep1,1,1,18,2,www/images/sleepstudy/v11_2.png,0
+161,person018,question161,Conditional,yes,residual plot,rep1,2,1,18,1,www/images/sleepstudy/v21_1.png,0
+162,person018,question162,Conditional,no,residual plot,rep1,1,1,18,1,www/images/sleepstudy/v11_1.png,0
+163,person019,question163,Least-confounded,no,QQ-plot,rep5,1,5,19,3,www/images/sleepstudy/v15_3.png,0
+164,person019,question164,Conditional,yes,residual plot,rep5,2,5,19,1,www/images/sleepstudy/v25_1.png,0
+165,person019,question165,Least-confounded,yes,residual plot,rep5,2,5,19,4,www/images/sleepstudy/v25_4.png,0
+166,person019,question166,Conditional,no,QQ-plot,rep5,1,5,19,2,www/images/sleepstudy/v15_2.png,0
+167,person019,question167,Conditional,no,residual plot,rep5,1,5,19,1,www/images/sleepstudy/v15_1.png,0
+168,person019,question168,Least-confounded,no,residual plot,rep5,1,5,19,4,www/images/sleepstudy/v15_4.png,0
+169,person019,question169,control,control,control,rep5,NA,5,19,NA,www/images/sleepstudy/vNA5_NA.png,0
+170,person019,question170,Conditional,yes,QQ-plot,rep5,2,5,19,2,www/images/sleepstudy/v25_2.png,0
+171,person019,question171,Least-confounded,yes,QQ-plot,rep5,2,5,19,3,www/images/sleepstudy/v25_3.png,0
+172,person020,question172,Least-confounded,yes,QQ-plot,rep4,2,4,20,3,www/images/sleepstudy/v24_3.png,0
+173,person020,question173,Conditional,yes,QQ-plot,rep4,2,4,20,2,www/images/sleepstudy/v24_2.png,0
+174,person020,question174,Least-confounded,yes,residual plot,rep4,2,4,20,4,www/images/sleepstudy/v24_4.png,0
+175,person020,question175,Conditional,yes,residual plot,rep4,2,4,20,1,www/images/sleepstudy/v24_1.png,0
+176,person020,question176,Least-confounded,no,QQ-plot,rep4,1,4,20,3,www/images/sleepstudy/v14_3.png,0
+177,person020,question177,control,control,control,rep4,NA,4,20,NA,www/images/sleepstudy/vNA4_NA.png,0
+178,person020,question178,Conditional,no,residual plot,rep4,1,4,20,1,www/images/sleepstudy/v14_1.png,0
+179,person020,question179,Least-confounded,no,residual plot,rep4,1,4,20,4,www/images/sleepstudy/v14_4.png,0
+180,person020,question180,Conditional,no,QQ-plot,rep4,1,4,20,2,www/images/sleepstudy/v14_2.png,0
+181,person021,question181,Conditional,yes,residual plot,rep4,2,4,21,1,www/images/sleepstudy/v24_1.png,0
+182,person021,question182,Conditional,yes,QQ-plot,rep4,2,4,21,2,www/images/sleepstudy/v24_2.png,0
+183,person021,question183,Conditional,no,residual plot,rep4,1,4,21,1,www/images/sleepstudy/v14_1.png,0
+184,person021,question184,Least-confounded,yes,residual plot,rep4,2,4,21,4,www/images/sleepstudy/v24_4.png,0
+185,person021,question185,Conditional,no,QQ-plot,rep4,1,4,21,2,www/images/sleepstudy/v14_2.png,0
+186,person021,question186,control,control,control,rep4,NA,4,21,NA,www/images/sleepstudy/vNA4_NA.png,0
+187,person021,question187,Least-confounded,no,QQ-plot,rep4,1,4,21,3,www/images/sleepstudy/v14_3.png,0
+188,person021,question188,Least-confounded,no,residual plot,rep4,1,4,21,4,www/images/sleepstudy/v14_4.png,0
+189,person021,question189,Least-confounded,yes,QQ-plot,rep4,2,4,21,3,www/images/sleepstudy/v24_3.png,0
+190,person022,question190,Least-confounded,no,residual plot,rep1,1,1,22,4,www/images/sleepstudy/v11_4.png,0
+191,person022,question191,Conditional,no,residual plot,rep1,1,1,22,1,www/images/sleepstudy/v11_1.png,0
+192,person022,question192,Conditional,yes,residual plot,rep1,2,1,22,1,www/images/sleepstudy/v21_1.png,0
+193,person022,question193,Least-confounded,yes,QQ-plot,rep1,2,1,22,3,www/images/sleepstudy/v21_3.png,0
+194,person022,question194,Conditional,no,QQ-plot,rep1,1,1,22,2,www/images/sleepstudy/v11_2.png,0
+195,person022,question195,Least-confounded,no,QQ-plot,rep1,1,1,22,3,www/images/sleepstudy/v11_3.png,0
+196,person022,question196,Least-confounded,yes,residual plot,rep1,2,1,22,4,www/images/sleepstudy/v21_4.png,0
+197,person022,question197,control,control,control,rep1,NA,1,22,NA,www/images/sleepstudy/vNA1_NA.png,0
+198,person022,question198,Conditional,yes,QQ-plot,rep1,2,1,22,2,www/images/sleepstudy/v21_2.png,0
+199,person023,question199,Conditional,no,residual plot,rep5,1,5,23,1,www/images/sleepstudy/v15_1.png,0
+200,person023,question200,Least-confounded,no,QQ-plot,rep5,1,5,23,3,www/images/sleepstudy/v15_3.png,0
+201,person023,question201,Conditional,yes,residual plot,rep5,2,5,23,1,www/images/sleepstudy/v25_1.png,0
+202,person023,question202,Conditional,no,QQ-plot,rep5,1,5,23,2,www/images/sleepstudy/v15_2.png,0
+203,person023,question203,Least-confounded,yes,residual plot,rep5,2,5,23,4,www/images/sleepstudy/v25_4.png,0
+204,person023,question204,control,control,control,rep5,NA,5,23,NA,www/images/sleepstudy/vNA5_NA.png,0
+205,person023,question205,Least-confounded,no,residual plot,rep5,1,5,23,4,www/images/sleepstudy/v15_4.png,0
+206,person023,question206,Least-confounded,yes,QQ-plot,rep5,2,5,23,3,www/images/sleepstudy/v25_3.png,0
+207,person023,question207,Conditional,yes,QQ-plot,rep5,2,5,23,2,www/images/sleepstudy/v25_2.png,0
+208,person024,question208,Least-confounded,yes,QQ-plot,rep3,2,3,24,3,www/images/sleepstudy/v23_3.png,0
+209,person024,question209,Conditional,yes,QQ-plot,rep3,2,3,24,2,www/images/sleepstudy/v23_2.png,0
+210,person024,question210,Conditional,yes,residual plot,rep3,2,3,24,1,www/images/sleepstudy/v23_1.png,0
+211,person024,question211,Conditional,no,residual plot,rep3,1,3,24,1,www/images/sleepstudy/v13_1.png,0
+212,person024,question212,control,control,control,rep3,NA,3,24,NA,www/images/sleepstudy/vNA3_NA.png,0
+213,person024,question213,Conditional,no,QQ-plot,rep3,1,3,24,2,www/images/sleepstudy/v13_2.png,0
+214,person024,question214,Least-confounded,yes,residual plot,rep3,2,3,24,4,www/images/sleepstudy/v23_4.png,0
+215,person024,question215,Least-confounded,no,QQ-plot,rep3,1,3,24,3,www/images/sleepstudy/v13_3.png,0
+216,person024,question216,Least-confounded,no,residual plot,rep3,1,3,24,4,www/images/sleepstudy/v13_4.png,0
+217,person025,question217,Conditional,yes,QQ-plot,rep1,2,1,25,2,www/images/sleepstudy/v21_2.png,0
+218,person025,question218,Conditional,no,QQ-plot,rep1,1,1,25,2,www/images/sleepstudy/v11_2.png,0
+219,person025,question219,Conditional,no,residual plot,rep1,1,1,25,1,www/images/sleepstudy/v11_1.png,0
+220,person025,question220,control,control,control,rep1,NA,1,25,NA,www/images/sleepstudy/vNA1_NA.png,0
+221,person025,question221,Least-confounded,no,residual plot,rep1,1,1,25,4,www/images/sleepstudy/v11_4.png,0
+222,person025,question222,Least-confounded,yes,residual plot,rep1,2,1,25,4,www/images/sleepstudy/v21_4.png,0
+223,person025,question223,Least-confounded,no,QQ-plot,rep1,1,1,25,3,www/images/sleepstudy/v11_3.png,0
+224,person025,question224,Least-confounded,yes,QQ-plot,rep1,2,1,25,3,www/images/sleepstudy/v21_3.png,0
+225,person025,question225,Conditional,yes,residual plot,rep1,2,1,25,1,www/images/sleepstudy/v21_1.png,0
+226,person026,question226,Least-confounded,yes,QQ-plot,rep2,2,2,26,3,www/images/sleepstudy/v22_3.png,0
+227,person026,question227,control,control,control,rep2,NA,2,26,NA,www/images/sleepstudy/vNA2_NA.png,0
+228,person026,question228,Least-confounded,yes,residual plot,rep2,2,2,26,4,www/images/sleepstudy/v22_4.png,0
+229,person026,question229,Conditional,yes,residual plot,rep2,2,2,26,1,www/images/sleepstudy/v22_1.png,0
+230,person026,question230,Least-confounded,no,QQ-plot,rep2,1,2,26,3,www/images/sleepstudy/v12_3.png,0
+231,person026,question231,Conditional,no,residual plot,rep2,1,2,26,1,www/images/sleepstudy/v12_1.png,0
+232,person026,question232,Conditional,yes,QQ-plot,rep2,2,2,26,2,www/images/sleepstudy/v22_2.png,0
+233,person026,question233,Conditional,no,QQ-plot,rep2,1,2,26,2,www/images/sleepstudy/v12_2.png,0
+234,person026,question234,Least-confounded,no,residual plot,rep2,1,2,26,4,www/images/sleepstudy/v12_4.png,0
+235,person027,question235,Conditional,yes,QQ-plot,rep2,2,2,27,2,www/images/sleepstudy/v22_2.png,0
+236,person027,question236,Least-confounded,yes,QQ-plot,rep2,2,2,27,3,www/images/sleepstudy/v22_3.png,0
+237,person027,question237,Conditional,no,residual plot,rep2,1,2,27,1,www/images/sleepstudy/v12_1.png,0
+238,person027,question238,Least-confounded,no,QQ-plot,rep2,1,2,27,3,www/images/sleepstudy/v12_3.png,0
+239,person027,question239,control,control,control,rep2,NA,2,27,NA,www/images/sleepstudy/vNA2_NA.png,0
+240,person027,question240,Conditional,yes,residual plot,rep2,2,2,27,1,www/images/sleepstudy/v22_1.png,0
+241,person027,question241,Least-confounded,yes,residual plot,rep2,2,2,27,4,www/images/sleepstudy/v22_4.png,0
+242,person027,question242,Conditional,no,QQ-plot,rep2,1,2,27,2,www/images/sleepstudy/v12_2.png,0
+243,person027,question243,Least-confounded,no,residual plot,rep2,1,2,27,4,www/images/sleepstudy/v12_4.png,0
+244,person028,question244,control,control,control,rep1,NA,1,28,NA,www/images/sleepstudy/vNA1_NA.png,0
+245,person028,question245,Conditional,no,residual plot,rep1,1,1,28,1,www/images/sleepstudy/v11_1.png,0
+246,person028,question246,Conditional,no,QQ-plot,rep1,1,1,28,2,www/images/sleepstudy/v11_2.png,0
+247,person028,question247,Least-confounded,yes,residual plot,rep1,2,1,28,4,www/images/sleepstudy/v21_4.png,0
+248,person028,question248,Conditional,yes,QQ-plot,rep1,2,1,28,2,www/images/sleepstudy/v21_2.png,0
+249,person028,question249,Conditional,yes,residual plot,rep1,2,1,28,1,www/images/sleepstudy/v21_1.png,0
+250,person028,question250,Least-confounded,no,QQ-plot,rep1,1,1,28,3,www/images/sleepstudy/v11_3.png,0
+251,person028,question251,Least-confounded,yes,QQ-plot,rep1,2,1,28,3,www/images/sleepstudy/v21_3.png,0
+252,person028,question252,Least-confounded,no,residual plot,rep1,1,1,28,4,www/images/sleepstudy/v11_4.png,0
+253,person029,question253,Least-confounded,yes,QQ-plot,rep5,2,5,29,3,www/images/sleepstudy/v25_3.png,0
+254,person029,question254,Least-confounded,no,QQ-plot,rep5,1,5,29,3,www/images/sleepstudy/v15_3.png,0
+255,person029,question255,Conditional,no,residual plot,rep5,1,5,29,1,www/images/sleepstudy/v15_1.png,0
+256,person029,question256,control,control,control,rep5,NA,5,29,NA,www/images/sleepstudy/vNA5_NA.png,0
+257,person029,question257,Conditional,yes,QQ-plot,rep5,2,5,29,2,www/images/sleepstudy/v25_2.png,0
+258,person029,question258,Conditional,yes,residual plot,rep5,2,5,29,1,www/images/sleepstudy/v25_1.png,0
+259,person029,question259,Conditional,no,QQ-plot,rep5,1,5,29,2,www/images/sleepstudy/v15_2.png,0
+260,person029,question260,Least-confounded,no,residual plot,rep5,1,5,29,4,www/images/sleepstudy/v15_4.png,0
+261,person029,question261,Least-confounded,yes,residual plot,rep5,2,5,29,4,www/images/sleepstudy/v25_4.png,0
+262,person030,question262,Least-confounded,no,QQ-plot,rep3,1,3,30,3,www/images/sleepstudy/v13_3.png,0
+263,person030,question263,Conditional,no,QQ-plot,rep3,1,3,30,2,www/images/sleepstudy/v13_2.png,0
+264,person030,question264,Conditional,yes,QQ-plot,rep3,2,3,30,2,www/images/sleepstudy/v23_2.png,0
+265,person030,question265,Least-confounded,no,residual plot,rep3,1,3,30,4,www/images/sleepstudy/v13_4.png,0
+266,person030,question266,Conditional,yes,residual plot,rep3,2,3,30,1,www/images/sleepstudy/v23_1.png,0
+267,person030,question267,Least-confounded,yes,residual plot,rep3,2,3,30,4,www/images/sleepstudy/v23_4.png,0
+268,person030,question268,Least-confounded,yes,QQ-plot,rep3,2,3,30,3,www/images/sleepstudy/v23_3.png,0
+269,person030,question269,control,control,control,rep3,NA,3,30,NA,www/images/sleepstudy/vNA3_NA.png,0
+270,person030,question270,Conditional,no,residual plot,rep3,1,3,30,1,www/images/sleepstudy/v13_1.png,0
+271,person031,question271,Least-confounded,yes,residual plot,rep4,2,4,31,4,www/images/sleepstudy/v24_4.png,0
+272,person031,question272,Conditional,yes,QQ-plot,rep4,2,4,31,2,www/images/sleepstudy/v24_2.png,0
+273,person031,question273,Least-confounded,yes,QQ-plot,rep4,2,4,31,3,www/images/sleepstudy/v24_3.png,0
+274,person031,question274,control,control,control,rep4,NA,4,31,NA,www/images/sleepstudy/vNA4_NA.png,0
+275,person031,question275,Conditional,no,QQ-plot,rep4,1,4,31,2,www/images/sleepstudy/v14_2.png,0
+276,person031,question276,Least-confounded,no,QQ-plot,rep4,1,4,31,3,www/images/sleepstudy/v14_3.png,0
+277,person031,question277,Conditional,yes,residual plot,rep4,2,4,31,1,www/images/sleepstudy/v24_1.png,0
+278,person031,question278,Conditional,no,residual plot,rep4,1,4,31,1,www/images/sleepstudy/v14_1.png,0
+279,person031,question279,Least-confounded,no,residual plot,rep4,1,4,31,4,www/images/sleepstudy/v14_4.png,0
+280,person032,question280,Conditional,yes,residual plot,rep3,2,3,32,1,www/images/sleepstudy/v23_1.png,0
+281,person032,question281,Conditional,no,residual plot,rep3,1,3,32,1,www/images/sleepstudy/v13_1.png,0
+282,person032,question282,Conditional,yes,QQ-plot,rep3,2,3,32,2,www/images/sleepstudy/v23_2.png,0
+283,person032,question283,Least-confounded,no,QQ-plot,rep3,1,3,32,3,www/images/sleepstudy/v13_3.png,0
+284,person032,question284,Least-confounded,no,residual plot,rep3,1,3,32,4,www/images/sleepstudy/v13_4.png,0
+285,person032,question285,control,control,control,rep3,NA,3,32,NA,www/images/sleepstudy/vNA3_NA.png,0
+286,person032,question286,Conditional,no,QQ-plot,rep3,1,3,32,2,www/images/sleepstudy/v13_2.png,0
+287,person032,question287,Least-confounded,yes,residual plot,rep3,2,3,32,4,www/images/sleepstudy/v23_4.png,0
+288,person032,question288,Least-confounded,yes,QQ-plot,rep3,2,3,32,3,www/images/sleepstudy/v23_3.png,0
+289,person033,question289,Conditional,no,QQ-plot,rep3,1,3,33,2,www/images/sleepstudy/v13_2.png,0
+290,person033,question290,Conditional,yes,QQ-plot,rep3,2,3,33,2,www/images/sleepstudy/v23_2.png,0
+291,person033,question291,Conditional,yes,residual plot,rep3,2,3,33,1,www/images/sleepstudy/v23_1.png,0
+292,person033,question292,Least-confounded,no,residual plot,rep3,1,3,33,4,www/images/sleepstudy/v13_4.png,0
+293,person033,question293,Least-confounded,yes,QQ-plot,rep3,2,3,33,3,www/images/sleepstudy/v23_3.png,0
+294,person033,question294,Conditional,no,residual plot,rep3,1,3,33,1,www/images/sleepstudy/v13_1.png,0
+295,person033,question295,Least-confounded,no,QQ-plot,rep3,1,3,33,3,www/images/sleepstudy/v13_3.png,0
+296,person033,question296,control,control,control,rep3,NA,3,33,NA,www/images/sleepstudy/vNA3_NA.png,0
+297,person033,question297,Least-confounded,yes,residual plot,rep3,2,3,33,4,www/images/sleepstudy/v23_4.png,0
+298,person034,question298,Least-confounded,yes,QQ-plot,rep5,2,5,34,3,www/images/sleepstudy/v25_3.png,0
+299,person034,question299,control,control,control,rep5,NA,5,34,NA,www/images/sleepstudy/vNA5_NA.png,0
+300,person034,question300,Conditional,yes,residual plot,rep5,2,5,34,1,www/images/sleepstudy/v25_1.png,0
+301,person034,question301,Conditional,yes,QQ-plot,rep5,2,5,34,2,www/images/sleepstudy/v25_2.png,0
+302,person034,question302,Conditional,no,residual plot,rep5,1,5,34,1,www/images/sleepstudy/v15_1.png,0
+303,person034,question303,Least-confounded,no,residual plot,rep5,1,5,34,4,www/images/sleepstudy/v15_4.png,0
+304,person034,question304,Least-confounded,no,QQ-plot,rep5,1,5,34,3,www/images/sleepstudy/v15_3.png,0
+305,person034,question305,Conditional,no,QQ-plot,rep5,1,5,34,2,www/images/sleepstudy/v15_2.png,0
+306,person034,question306,Least-confounded,yes,residual plot,rep5,2,5,34,4,www/images/sleepstudy/v25_4.png,0
+307,person035,question307,Least-confounded,yes,QQ-plot,rep1,2,1,35,3,www/images/sleepstudy/v21_3.png,0
+308,person035,question308,Conditional,no,QQ-plot,rep1,1,1,35,2,www/images/sleepstudy/v11_2.png,0
+309,person035,question309,Least-confounded,no,residual plot,rep1,1,1,35,4,www/images/sleepstudy/v11_4.png,0
+310,person035,question310,Conditional,yes,residual plot,rep1,2,1,35,1,www/images/sleepstudy/v21_1.png,0
+311,person035,question311,Conditional,yes,QQ-plot,rep1,2,1,35,2,www/images/sleepstudy/v21_2.png,0
+312,person035,question312,Conditional,no,residual plot,rep1,1,1,35,1,www/images/sleepstudy/v11_1.png,0
+313,person035,question313,Least-confounded,yes,residual plot,rep1,2,1,35,4,www/images/sleepstudy/v21_4.png,0
+314,person035,question314,control,control,control,rep1,NA,1,35,NA,www/images/sleepstudy/vNA1_NA.png,0
+315,person035,question315,Least-confounded,no,QQ-plot,rep1,1,1,35,3,www/images/sleepstudy/v11_3.png,0
+316,person036,question316,Least-confounded,yes,residual plot,rep3,2,3,36,4,www/images/sleepstudy/v23_4.png,0
+317,person036,question317,Least-confounded,yes,QQ-plot,rep3,2,3,36,3,www/images/sleepstudy/v23_3.png,0
+318,person036,question318,Conditional,no,residual plot,rep3,1,3,36,1,www/images/sleepstudy/v13_1.png,0
+319,person036,question319,control,control,control,rep3,NA,3,36,NA,www/images/sleepstudy/vNA3_NA.png,0
+320,person036,question320,Least-confounded,no,QQ-plot,rep3,1,3,36,3,www/images/sleepstudy/v13_3.png,0
+321,person036,question321,Conditional,yes,QQ-plot,rep3,2,3,36,2,www/images/sleepstudy/v23_2.png,0
+322,person036,question322,Conditional,yes,residual plot,rep3,2,3,36,1,www/images/sleepstudy/v23_1.png,0
+323,person036,question323,Least-confounded,no,residual plot,rep3,1,3,36,4,www/images/sleepstudy/v13_4.png,0
+324,person036,question324,Conditional,no,QQ-plot,rep3,1,3,36,2,www/images/sleepstudy/v13_2.png,0
+325,person037,question325,control,control,control,rep1,NA,1,37,NA,www/images/sleepstudy/vNA1_NA.png,0
+326,person037,question326,Least-confounded,yes,residual plot,rep1,2,1,37,4,www/images/sleepstudy/v21_4.png,0
+327,person037,question327,Conditional,no,residual plot,rep1,1,1,37,1,www/images/sleepstudy/v11_1.png,0
+328,person037,question328,Least-confounded,no,QQ-plot,rep1,1,1,37,3,www/images/sleepstudy/v11_3.png,0
+329,person037,question329,Conditional,no,QQ-plot,rep1,1,1,37,2,www/images/sleepstudy/v11_2.png,0
+330,person037,question330,Least-confounded,yes,QQ-plot,rep1,2,1,37,3,www/images/sleepstudy/v21_3.png,0
+331,person037,question331,Conditional,yes,QQ-plot,rep1,2,1,37,2,www/images/sleepstudy/v21_2.png,0
+332,person037,question332,Conditional,yes,residual plot,rep1,2,1,37,1,www/images/sleepstudy/v21_1.png,0
+333,person037,question333,Least-confounded,no,residual plot,rep1,1,1,37,4,www/images/sleepstudy/v11_4.png,0
+334,person038,question334,control,control,control,rep1,NA,1,38,NA,www/images/sleepstudy/vNA1_NA.png,0
+335,person038,question335,Conditional,no,residual plot,rep1,1,1,38,1,www/images/sleepstudy/v11_1.png,0
+336,person038,question336,Least-confounded,yes,residual plot,rep1,2,1,38,4,www/images/sleepstudy/v21_4.png,0
+337,person038,question337,Least-confounded,yes,QQ-plot,rep1,2,1,38,3,www/images/sleepstudy/v21_3.png,0
+338,person038,question338,Conditional,yes,residual plot,rep1,2,1,38,1,www/images/sleepstudy/v21_1.png,0
+339,person038,question339,Conditional,no,QQ-plot,rep1,1,1,38,2,www/images/sleepstudy/v11_2.png,0
+340,person038,question340,Conditional,yes,QQ-plot,rep1,2,1,38,2,www/images/sleepstudy/v21_2.png,0
+341,person038,question341,Least-confounded,no,QQ-plot,rep1,1,1,38,3,www/images/sleepstudy/v11_3.png,0
+342,person038,question342,Least-confounded,no,residual plot,rep1,1,1,38,4,www/images/sleepstudy/v11_4.png,0
+343,person039,question343,Conditional,no,residual plot,rep5,1,5,39,1,www/images/sleepstudy/v15_1.png,0
+344,person039,question344,Least-confounded,no,residual plot,rep5,1,5,39,4,www/images/sleepstudy/v15_4.png,0
+345,person039,question345,Conditional,yes,residual plot,rep5,2,5,39,1,www/images/sleepstudy/v25_1.png,0
+346,person039,question346,Conditional,yes,QQ-plot,rep5,2,5,39,2,www/images/sleepstudy/v25_2.png,0
+347,person039,question347,Least-confounded,yes,QQ-plot,rep5,2,5,39,3,www/images/sleepstudy/v25_3.png,0
+348,person039,question348,Least-confounded,yes,residual plot,rep5,2,5,39,4,www/images/sleepstudy/v25_4.png,0
+349,person039,question349,Least-confounded,no,QQ-plot,rep5,1,5,39,3,www/images/sleepstudy/v15_3.png,0
+350,person039,question350,control,control,control,rep5,NA,5,39,NA,www/images/sleepstudy/vNA5_NA.png,0
+351,person039,question351,Conditional,no,QQ-plot,rep5,1,5,39,2,www/images/sleepstudy/v15_2.png,0
+352,person040,question352,Conditional,no,residual plot,rep1,1,1,40,1,www/images/sleepstudy/v11_1.png,0
+353,person040,question353,Least-confounded,no,residual plot,rep1,1,1,40,4,www/images/sleepstudy/v11_4.png,0
+354,person040,question354,Conditional,yes,QQ-plot,rep1,2,1,40,2,www/images/sleepstudy/v21_2.png,0
+355,person040,question355,Conditional,no,QQ-plot,rep1,1,1,40,2,www/images/sleepstudy/v11_2.png,0
+356,person040,question356,control,control,control,rep1,NA,1,40,NA,www/images/sleepstudy/vNA1_NA.png,0
+357,person040,question357,Least-confounded,no,QQ-plot,rep1,1,1,40,3,www/images/sleepstudy/v11_3.png,0
+358,person040,question358,Conditional,yes,residual plot,rep1,2,1,40,1,www/images/sleepstudy/v21_1.png,0
+359,person040,question359,Least-confounded,yes,residual plot,rep1,2,1,40,4,www/images/sleepstudy/v21_4.png,0
+360,person040,question360,Least-confounded,yes,QQ-plot,rep1,2,1,40,3,www/images/sleepstudy/v21_3.png,0
+361,person041,question361,Least-confounded,yes,residual plot,rep3,2,3,41,4,www/images/sleepstudy/v23_4.png,0
+362,person041,question362,Least-confounded,yes,QQ-plot,rep3,2,3,41,3,www/images/sleepstudy/v23_3.png,0
+363,person041,question363,Conditional,yes,residual plot,rep3,2,3,41,1,www/images/sleepstudy/v23_1.png,0
+364,person041,question364,Conditional,yes,QQ-plot,rep3,2,3,41,2,www/images/sleepstudy/v23_2.png,0
+365,person041,question365,Conditional,no,residual plot,rep3,1,3,41,1,www/images/sleepstudy/v13_1.png,0
+366,person041,question366,Least-confounded,no,residual plot,rep3,1,3,41,4,www/images/sleepstudy/v13_4.png,0
+367,person041,question367,Conditional,no,QQ-plot,rep3,1,3,41,2,www/images/sleepstudy/v13_2.png,0
+368,person041,question368,Least-confounded,no,QQ-plot,rep3,1,3,41,3,www/images/sleepstudy/v13_3.png,0
+369,person041,question369,control,control,control,rep3,NA,3,41,NA,www/images/sleepstudy/vNA3_NA.png,0
+370,person042,question370,Least-confounded,no,residual plot,rep2,1,2,42,4,www/images/sleepstudy/v12_4.png,0
+371,person042,question371,Least-confounded,yes,residual plot,rep2,2,2,42,4,www/images/sleepstudy/v22_4.png,0
+372,person042,question372,Conditional,yes,residual plot,rep2,2,2,42,1,www/images/sleepstudy/v22_1.png,0
+373,person042,question373,Conditional,no,QQ-plot,rep2,1,2,42,2,www/images/sleepstudy/v12_2.png,0
+374,person042,question374,control,control,control,rep2,NA,2,42,NA,www/images/sleepstudy/vNA2_NA.png,0
+375,person042,question375,Least-confounded,yes,QQ-plot,rep2,2,2,42,3,www/images/sleepstudy/v22_3.png,0
+376,person042,question376,Conditional,yes,QQ-plot,rep2,2,2,42,2,www/images/sleepstudy/v22_2.png,0
+377,person042,question377,Least-confounded,no,QQ-plot,rep2,1,2,42,3,www/images/sleepstudy/v12_3.png,0
+378,person042,question378,Conditional,no,residual plot,rep2,1,2,42,1,www/images/sleepstudy/v12_1.png,0
+379,person043,question379,Least-confounded,yes,QQ-plot,rep4,2,4,43,3,www/images/sleepstudy/v24_3.png,0
+380,person043,question380,Least-confounded,no,QQ-plot,rep4,1,4,43,3,www/images/sleepstudy/v14_3.png,0
+381,person043,question381,Conditional,yes,residual plot,rep4,2,4,43,1,www/images/sleepstudy/v24_1.png,0
+382,person043,question382,Least-confounded,no,residual plot,rep4,1,4,43,4,www/images/sleepstudy/v14_4.png,0
+383,person043,question383,Conditional,no,QQ-plot,rep4,1,4,43,2,www/images/sleepstudy/v14_2.png,0
+384,person043,question384,Conditional,no,residual plot,rep4,1,4,43,1,www/images/sleepstudy/v14_1.png,0
+385,person043,question385,Conditional,yes,QQ-plot,rep4,2,4,43,2,www/images/sleepstudy/v24_2.png,0
+386,person043,question386,Least-confounded,yes,residual plot,rep4,2,4,43,4,www/images/sleepstudy/v24_4.png,0
+387,person043,question387,control,control,control,rep4,NA,4,43,NA,www/images/sleepstudy/vNA4_NA.png,0
+388,person044,question388,Least-confounded,yes,QQ-plot,rep4,2,4,44,3,www/images/sleepstudy/v24_3.png,0
+389,person044,question389,Conditional,no,QQ-plot,rep4,1,4,44,2,www/images/sleepstudy/v14_2.png,0
+390,person044,question390,Conditional,yes,residual plot,rep4,2,4,44,1,www/images/sleepstudy/v24_1.png,0
+391,person044,question391,Least-confounded,no,residual plot,rep4,1,4,44,4,www/images/sleepstudy/v14_4.png,0
+392,person044,question392,Conditional,no,residual plot,rep4,1,4,44,1,www/images/sleepstudy/v14_1.png,0
+393,person044,question393,control,control,control,rep4,NA,4,44,NA,www/images/sleepstudy/vNA4_NA.png,0
+394,person044,question394,Conditional,yes,QQ-plot,rep4,2,4,44,2,www/images/sleepstudy/v24_2.png,0
+395,person044,question395,Least-confounded,no,QQ-plot,rep4,1,4,44,3,www/images/sleepstudy/v14_3.png,0
+396,person044,question396,Least-confounded,yes,residual plot,rep4,2,4,44,4,www/images/sleepstudy/v24_4.png,0
+397,person045,question397,Conditional,yes,residual plot,rep1,2,1,45,1,www/images/sleepstudy/v21_1.png,0
+398,person045,question398,Least-confounded,no,QQ-plot,rep1,1,1,45,3,www/images/sleepstudy/v11_3.png,0
+399,person045,question399,Conditional,no,QQ-plot,rep1,1,1,45,2,www/images/sleepstudy/v11_2.png,0
+400,person045,question400,Least-confounded,yes,residual plot,rep1,2,1,45,4,www/images/sleepstudy/v21_4.png,0
+401,person045,question401,Least-confounded,no,residual plot,rep1,1,1,45,4,www/images/sleepstudy/v11_4.png,0
+402,person045,question402,Conditional,yes,QQ-plot,rep1,2,1,45,2,www/images/sleepstudy/v21_2.png,0
+403,person045,question403,Least-confounded,yes,QQ-plot,rep1,2,1,45,3,www/images/sleepstudy/v21_3.png,0
+404,person045,question404,control,control,control,rep1,NA,1,45,NA,www/images/sleepstudy/vNA1_NA.png,0
+405,person045,question405,Conditional,no,residual plot,rep1,1,1,45,1,www/images/sleepstudy/v11_1.png,0
+406,person046,question406,Conditional,no,QQ-plot,rep5,1,5,46,2,www/images/sleepstudy/v15_2.png,0
+407,person046,question407,Least-confounded,yes,residual plot,rep5,2,5,46,4,www/images/sleepstudy/v25_4.png,0
+408,person046,question408,Conditional,yes,residual plot,rep5,2,5,46,1,www/images/sleepstudy/v25_1.png,0
+409,person046,question409,Conditional,no,residual plot,rep5,1,5,46,1,www/images/sleepstudy/v15_1.png,0
+410,person046,question410,Least-confounded,yes,QQ-plot,rep5,2,5,46,3,www/images/sleepstudy/v25_3.png,0
+411,person046,question411,Conditional,yes,QQ-plot,rep5,2,5,46,2,www/images/sleepstudy/v25_2.png,0
+412,person046,question412,Least-confounded,no,residual plot,rep5,1,5,46,4,www/images/sleepstudy/v15_4.png,0
+413,person046,question413,Least-confounded,no,QQ-plot,rep5,1,5,46,3,www/images/sleepstudy/v15_3.png,0
+414,person046,question414,control,control,control,rep5,NA,5,46,NA,www/images/sleepstudy/vNA5_NA.png,0
+415,person047,question415,Conditional,yes,QQ-plot,rep1,2,1,47,2,www/images/sleepstudy/v21_2.png,0
+416,person047,question416,Conditional,yes,residual plot,rep1,2,1,47,1,www/images/sleepstudy/v21_1.png,0
+417,person047,question417,Least-confounded,no,QQ-plot,rep1,1,1,47,3,www/images/sleepstudy/v11_3.png,0
+418,person047,question418,control,control,control,rep1,NA,1,47,NA,www/images/sleepstudy/vNA1_NA.png,0
+419,person047,question419,Least-confounded,no,residual plot,rep1,1,1,47,4,www/images/sleepstudy/v11_4.png,0
+420,person047,question420,Least-confounded,yes,QQ-plot,rep1,2,1,47,3,www/images/sleepstudy/v21_3.png,0
+421,person047,question421,Conditional,no,residual plot,rep1,1,1,47,1,www/images/sleepstudy/v11_1.png,0
+422,person047,question422,Conditional,no,QQ-plot,rep1,1,1,47,2,www/images/sleepstudy/v11_2.png,0
+423,person047,question423,Least-confounded,yes,residual plot,rep1,2,1,47,4,www/images/sleepstudy/v21_4.png,0
+424,person048,question424,Conditional,yes,QQ-plot,rep4,2,4,48,2,www/images/sleepstudy/v24_2.png,0
+425,person048,question425,control,control,control,rep4,NA,4,48,NA,www/images/sleepstudy/vNA4_NA.png,0
+426,person048,question426,Least-confounded,no,residual plot,rep4,1,4,48,4,www/images/sleepstudy/v14_4.png,0
+427,person048,question427,Least-confounded,yes,QQ-plot,rep4,2,4,48,3,www/images/sleepstudy/v24_3.png,0
+428,person048,question428,Least-confounded,yes,residual plot,rep4,2,4,48,4,www/images/sleepstudy/v24_4.png,0
+429,person048,question429,Conditional,no,residual plot,rep4,1,4,48,1,www/images/sleepstudy/v14_1.png,0
+430,person048,question430,Conditional,yes,residual plot,rep4,2,4,48,1,www/images/sleepstudy/v24_1.png,0
+431,person048,question431,Least-confounded,no,QQ-plot,rep4,1,4,48,3,www/images/sleepstudy/v14_3.png,0
+432,person048,question432,Conditional,no,QQ-plot,rep4,1,4,48,2,www/images/sleepstudy/v14_2.png,0
+433,person049,question433,Least-confounded,yes,residual plot,rep3,2,3,49,4,www/images/sleepstudy/v23_4.png,0
+434,person049,question434,Least-confounded,no,QQ-plot,rep3,1,3,49,3,www/images/sleepstudy/v13_3.png,0
+435,person049,question435,Conditional,no,residual plot,rep3,1,3,49,1,www/images/sleepstudy/v13_1.png,0
+436,person049,question436,Least-confounded,yes,QQ-plot,rep3,2,3,49,3,www/images/sleepstudy/v23_3.png,0
+437,person049,question437,control,control,control,rep3,NA,3,49,NA,www/images/sleepstudy/vNA3_NA.png,0
+438,person049,question438,Least-confounded,no,residual plot,rep3,1,3,49,4,www/images/sleepstudy/v13_4.png,0
+439,person049,question439,Conditional,yes,residual plot,rep3,2,3,49,1,www/images/sleepstudy/v23_1.png,0
+440,person049,question440,Conditional,no,QQ-plot,rep3,1,3,49,2,www/images/sleepstudy/v13_2.png,0
+441,person049,question441,Conditional,yes,QQ-plot,rep3,2,3,49,2,www/images/sleepstudy/v23_2.png,0
+442,person050,question442,Conditional,yes,residual plot,rep1,2,1,50,1,www/images/sleepstudy/v21_1.png,0
+443,person050,question443,Least-confounded,no,residual plot,rep1,1,1,50,4,www/images/sleepstudy/v11_4.png,0
+444,person050,question444,Least-confounded,yes,residual plot,rep1,2,1,50,4,www/images/sleepstudy/v21_4.png,0
+445,person050,question445,Least-confounded,no,QQ-plot,rep1,1,1,50,3,www/images/sleepstudy/v11_3.png,0
+446,person050,question446,Least-confounded,yes,QQ-plot,rep1,2,1,50,3,www/images/sleepstudy/v21_3.png,0
+447,person050,question447,Conditional,yes,QQ-plot,rep1,2,1,50,2,www/images/sleepstudy/v21_2.png,0
+448,person050,question448,Conditional,no,residual plot,rep1,1,1,50,1,www/images/sleepstudy/v11_1.png,0
+449,person050,question449,control,control,control,rep1,NA,1,50,NA,www/images/sleepstudy/vNA1_NA.png,0
+450,person050,question450,Conditional,no,QQ-plot,rep1,1,1,50,2,www/images/sleepstudy/v11_2.png,0
+451,person051,question451,Conditional,yes,QQ-plot,rep2,2,2,51,2,www/images/sleepstudy/v22_2.png,0
+452,person051,question452,control,control,control,rep2,NA,2,51,NA,www/images/sleepstudy/vNA2_NA.png,0
+453,person051,question453,Least-confounded,yes,residual plot,rep2,2,2,51,4,www/images/sleepstudy/v22_4.png,0
+454,person051,question454,Least-confounded,no,QQ-plot,rep2,1,2,51,3,www/images/sleepstudy/v12_3.png,0
+455,person051,question455,Conditional,no,residual plot,rep2,1,2,51,1,www/images/sleepstudy/v12_1.png,0
+456,person051,question456,Conditional,no,QQ-plot,rep2,1,2,51,2,www/images/sleepstudy/v12_2.png,0
+457,person051,question457,Conditional,yes,residual plot,rep2,2,2,51,1,www/images/sleepstudy/v22_1.png,0
+458,person051,question458,Least-confounded,no,residual plot,rep2,1,2,51,4,www/images/sleepstudy/v12_4.png,0
+459,person051,question459,Least-confounded,yes,QQ-plot,rep2,2,2,51,3,www/images/sleepstudy/v22_3.png,0
+460,person052,question460,Least-confounded,no,QQ-plot,rep3,1,3,52,3,www/images/sleepstudy/v13_3.png,0
+461,person052,question461,Least-confounded,yes,residual plot,rep3,2,3,52,4,www/images/sleepstudy/v23_4.png,0
+462,person052,question462,control,control,control,rep3,NA,3,52,NA,www/images/sleepstudy/vNA3_NA.png,0
+463,person052,question463,Conditional,no,residual plot,rep3,1,3,52,1,www/images/sleepstudy/v13_1.png,0
+464,person052,question464,Least-confounded,yes,QQ-plot,rep3,2,3,52,3,www/images/sleepstudy/v23_3.png,0
+465,person052,question465,Conditional,yes,QQ-plot,rep3,2,3,52,2,www/images/sleepstudy/v23_2.png,0
+466,person052,question466,Conditional,yes,residual plot,rep3,2,3,52,1,www/images/sleepstudy/v23_1.png,0
+467,person052,question467,Least-confounded,no,residual plot,rep3,1,3,52,4,www/images/sleepstudy/v13_4.png,0
+468,person052,question468,Conditional,no,QQ-plot,rep3,1,3,52,2,www/images/sleepstudy/v13_2.png,0
+469,person053,question469,Conditional,no,QQ-plot,rep4,1,4,53,2,www/images/sleepstudy/v14_2.png,0
+470,person053,question470,Least-confounded,no,residual plot,rep4,1,4,53,4,www/images/sleepstudy/v14_4.png,0
+471,person053,question471,Conditional,yes,QQ-plot,rep4,2,4,53,2,www/images/sleepstudy/v24_2.png,0
+472,person053,question472,control,control,control,rep4,NA,4,53,NA,www/images/sleepstudy/vNA4_NA.png,0
+473,person053,question473,Least-confounded,no,QQ-plot,rep4,1,4,53,3,www/images/sleepstudy/v14_3.png,0
+474,person053,question474,Least-confounded,yes,residual plot,rep4,2,4,53,4,www/images/sleepstudy/v24_4.png,0
+475,person053,question475,Conditional,yes,residual plot,rep4,2,4,53,1,www/images/sleepstudy/v24_1.png,0
+476,person053,question476,Conditional,no,residual plot,rep4,1,4,53,1,www/images/sleepstudy/v14_1.png,0
+477,person053,question477,Least-confounded,yes,QQ-plot,rep4,2,4,53,3,www/images/sleepstudy/v24_3.png,0
+478,person054,question478,Conditional,no,QQ-plot,rep3,1,3,54,2,www/images/sleepstudy/v13_2.png,0
+479,person054,question479,Conditional,yes,QQ-plot,rep3,2,3,54,2,www/images/sleepstudy/v23_2.png,0
+480,person054,question480,Conditional,yes,residual plot,rep3,2,3,54,1,www/images/sleepstudy/v23_1.png,0
+481,person054,question481,Least-confounded,no,QQ-plot,rep3,1,3,54,3,www/images/sleepstudy/v13_3.png,0
+482,person054,question482,Least-confounded,yes,residual plot,rep3,2,3,54,4,www/images/sleepstudy/v23_4.png,0
+483,person054,question483,Least-confounded,yes,QQ-plot,rep3,2,3,54,3,www/images/sleepstudy/v23_3.png,0
+484,person054,question484,control,control,control,rep3,NA,3,54,NA,www/images/sleepstudy/vNA3_NA.png,0
+485,person054,question485,Least-confounded,no,residual plot,rep3,1,3,54,4,www/images/sleepstudy/v13_4.png,0
+486,person054,question486,Conditional,no,residual plot,rep3,1,3,54,1,www/images/sleepstudy/v13_1.png,0
+487,person055,question487,control,control,control,rep2,NA,2,55,NA,www/images/sleepstudy/vNA2_NA.png,0
+488,person055,question488,Least-confounded,no,residual plot,rep2,1,2,55,4,www/images/sleepstudy/v12_4.png,0
+489,person055,question489,Conditional,no,residual plot,rep2,1,2,55,1,www/images/sleepstudy/v12_1.png,0
+490,person055,question490,Least-confounded,yes,QQ-plot,rep2,2,2,55,3,www/images/sleepstudy/v22_3.png,0
+491,person055,question491,Conditional,yes,QQ-plot,rep2,2,2,55,2,www/images/sleepstudy/v22_2.png,0
+492,person055,question492,Least-confounded,yes,residual plot,rep2,2,2,55,4,www/images/sleepstudy/v22_4.png,0
+493,person055,question493,Conditional,no,QQ-plot,rep2,1,2,55,2,www/images/sleepstudy/v12_2.png,0
+494,person055,question494,Least-confounded,no,QQ-plot,rep2,1,2,55,3,www/images/sleepstudy/v12_3.png,0
+495,person055,question495,Conditional,yes,residual plot,rep2,2,2,55,1,www/images/sleepstudy/v22_1.png,0
+496,person056,question496,Conditional,yes,residual plot,rep4,2,4,56,1,www/images/sleepstudy/v24_1.png,0
+497,person056,question497,Least-confounded,yes,residual plot,rep4,2,4,56,4,www/images/sleepstudy/v24_4.png,0
+498,person056,question498,Conditional,no,QQ-plot,rep4,1,4,56,2,www/images/sleepstudy/v14_2.png,0
+499,person056,question499,Least-confounded,no,QQ-plot,rep4,1,4,56,3,www/images/sleepstudy/v14_3.png,0
+500,person056,question500,Conditional,yes,QQ-plot,rep4,2,4,56,2,www/images/sleepstudy/v24_2.png,0
+501,person056,question501,Conditional,no,residual plot,rep4,1,4,56,1,www/images/sleepstudy/v14_1.png,0
+502,person056,question502,control,control,control,rep4,NA,4,56,NA,www/images/sleepstudy/vNA4_NA.png,0
+503,person056,question503,Least-confounded,yes,QQ-plot,rep4,2,4,56,3,www/images/sleepstudy/v24_3.png,0
+504,person056,question504,Least-confounded,no,residual plot,rep4,1,4,56,4,www/images/sleepstudy/v14_4.png,0
+505,person057,question505,Least-confounded,no,residual plot,rep2,1,2,57,4,www/images/sleepstudy/v12_4.png,0
+506,person057,question506,Conditional,no,residual plot,rep2,1,2,57,1,www/images/sleepstudy/v12_1.png,0
+507,person057,question507,control,control,control,rep2,NA,2,57,NA,www/images/sleepstudy/vNA2_NA.png,0
+508,person057,question508,Conditional,no,QQ-plot,rep2,1,2,57,2,www/images/sleepstudy/v12_2.png,0
+509,person057,question509,Conditional,yes,QQ-plot,rep2,2,2,57,2,www/images/sleepstudy/v22_2.png,0
+510,person057,question510,Least-confounded,yes,residual plot,rep2,2,2,57,4,www/images/sleepstudy/v22_4.png,0
+511,person057,question511,Least-confounded,no,QQ-plot,rep2,1,2,57,3,www/images/sleepstudy/v12_3.png,0
+512,person057,question512,Least-confounded,yes,QQ-plot,rep2,2,2,57,3,www/images/sleepstudy/v22_3.png,0
+513,person057,question513,Conditional,yes,residual plot,rep2,2,2,57,1,www/images/sleepstudy/v22_1.png,0
+514,person058,question514,Conditional,no,QQ-plot,rep5,1,5,58,2,www/images/sleepstudy/v15_2.png,0
+515,person058,question515,Conditional,yes,QQ-plot,rep5,2,5,58,2,www/images/sleepstudy/v25_2.png,0
+516,person058,question516,Conditional,no,residual plot,rep5,1,5,58,1,www/images/sleepstudy/v15_1.png,0
+517,person058,question517,control,control,control,rep5,NA,5,58,NA,www/images/sleepstudy/vNA5_NA.png,0
+518,person058,question518,Least-confounded,no,residual plot,rep5,1,5,58,4,www/images/sleepstudy/v15_4.png,0
+519,person058,question519,Least-confounded,no,QQ-plot,rep5,1,5,58,3,www/images/sleepstudy/v15_3.png,0
+520,person058,question520,Conditional,yes,residual plot,rep5,2,5,58,1,www/images/sleepstudy/v25_1.png,0
+521,person058,question521,Least-confounded,yes,residual plot,rep5,2,5,58,4,www/images/sleepstudy/v25_4.png,0
+522,person058,question522,Least-confounded,yes,QQ-plot,rep5,2,5,58,3,www/images/sleepstudy/v25_3.png,0
+523,person059,question523,Conditional,no,residual plot,rep5,1,5,59,1,www/images/sleepstudy/v15_1.png,0
+524,person059,question524,Least-confounded,no,QQ-plot,rep5,1,5,59,3,www/images/sleepstudy/v15_3.png,0
+525,person059,question525,control,control,control,rep5,NA,5,59,NA,www/images/sleepstudy/vNA5_NA.png,0
+526,person059,question526,Least-confounded,yes,residual plot,rep5,2,5,59,4,www/images/sleepstudy/v25_4.png,0
+527,person059,question527,Conditional,yes,residual plot,rep5,2,5,59,1,www/images/sleepstudy/v25_1.png,0
+528,person059,question528,Conditional,yes,QQ-plot,rep5,2,5,59,2,www/images/sleepstudy/v25_2.png,0
+529,person059,question529,Least-confounded,yes,QQ-plot,rep5,2,5,59,3,www/images/sleepstudy/v25_3.png,0
+530,person059,question530,Conditional,no,QQ-plot,rep5,1,5,59,2,www/images/sleepstudy/v15_2.png,0
+531,person059,question531,Least-confounded,no,residual plot,rep5,1,5,59,4,www/images/sleepstudy/v15_4.png,0
+532,person060,question532,Conditional,yes,residual plot,rep3,2,3,60,1,www/images/sleepstudy/v23_1.png,0
+533,person060,question533,Least-confounded,no,QQ-plot,rep3,1,3,60,3,www/images/sleepstudy/v13_3.png,0
+534,person060,question534,Least-confounded,yes,QQ-plot,rep3,2,3,60,3,www/images/sleepstudy/v23_3.png,0
+535,person060,question535,Least-confounded,no,residual plot,rep3,1,3,60,4,www/images/sleepstudy/v13_4.png,0
+536,person060,question536,Least-confounded,yes,residual plot,rep3,2,3,60,4,www/images/sleepstudy/v23_4.png,0
+537,person060,question537,Conditional,yes,QQ-plot,rep3,2,3,60,2,www/images/sleepstudy/v23_2.png,0
+538,person060,question538,Conditional,no,residual plot,rep3,1,3,60,1,www/images/sleepstudy/v13_1.png,0
+539,person060,question539,control,control,control,rep3,NA,3,60,NA,www/images/sleepstudy/vNA3_NA.png,0
+540,person060,question540,Conditional,no,QQ-plot,rep3,1,3,60,2,www/images/sleepstudy/v13_2.png,0
+541,person061,question541,Conditional,yes,residual plot,rep5,2,5,61,1,www/images/sleepstudy/v25_1.png,0
+542,person061,question542,control,control,control,rep5,NA,5,61,NA,www/images/sleepstudy/vNA5_NA.png,0
+543,person061,question543,Least-confounded,yes,residual plot,rep5,2,5,61,4,www/images/sleepstudy/v25_4.png,0
+544,person061,question544,Conditional,yes,QQ-plot,rep5,2,5,61,2,www/images/sleepstudy/v25_2.png,0
+545,person061,question545,Least-confounded,no,QQ-plot,rep5,1,5,61,3,www/images/sleepstudy/v15_3.png,0
+546,person061,question546,Conditional,no,QQ-plot,rep5,1,5,61,2,www/images/sleepstudy/v15_2.png,0
+547,person061,question547,Least-confounded,no,residual plot,rep5,1,5,61,4,www/images/sleepstudy/v15_4.png,0
+548,person061,question548,Conditional,no,residual plot,rep5,1,5,61,1,www/images/sleepstudy/v15_1.png,0
+549,person061,question549,Least-confounded,yes,QQ-plot,rep5,2,5,61,3,www/images/sleepstudy/v25_3.png,0
+550,person062,question550,Least-confounded,yes,QQ-plot,rep1,2,1,62,3,www/images/sleepstudy/v21_3.png,0
+551,person062,question551,Conditional,yes,QQ-plot,rep1,2,1,62,2,www/images/sleepstudy/v21_2.png,0
+552,person062,question552,Least-confounded,no,residual plot,rep1,1,1,62,4,www/images/sleepstudy/v11_4.png,0
+553,person062,question553,Conditional,no,residual plot,rep1,1,1,62,1,www/images/sleepstudy/v11_1.png,0
+554,person062,question554,Conditional,no,QQ-plot,rep1,1,1,62,2,www/images/sleepstudy/v11_2.png,0
+555,person062,question555,Least-confounded,no,QQ-plot,rep1,1,1,62,3,www/images/sleepstudy/v11_3.png,0
+556,person062,question556,control,control,control,rep1,NA,1,62,NA,www/images/sleepstudy/vNA1_NA.png,0
+557,person062,question557,Conditional,yes,residual plot,rep1,2,1,62,1,www/images/sleepstudy/v21_1.png,0
+558,person062,question558,Least-confounded,yes,residual plot,rep1,2,1,62,4,www/images/sleepstudy/v21_4.png,0
+559,person063,question559,Least-confounded,yes,QQ-plot,rep1,2,1,63,3,www/images/sleepstudy/v21_3.png,0
+560,person063,question560,Conditional,no,QQ-plot,rep1,1,1,63,2,www/images/sleepstudy/v11_2.png,0
+561,person063,question561,Conditional,yes,residual plot,rep1,2,1,63,1,www/images/sleepstudy/v21_1.png,0
+562,person063,question562,Least-confounded,no,residual plot,rep1,1,1,63,4,www/images/sleepstudy/v11_4.png,0
+563,person063,question563,Least-confounded,yes,residual plot,rep1,2,1,63,4,www/images/sleepstudy/v21_4.png,0
+564,person063,question564,control,control,control,rep1,NA,1,63,NA,www/images/sleepstudy/vNA1_NA.png,0
+565,person063,question565,Conditional,yes,QQ-plot,rep1,2,1,63,2,www/images/sleepstudy/v21_2.png,0
+566,person063,question566,Least-confounded,no,QQ-plot,rep1,1,1,63,3,www/images/sleepstudy/v11_3.png,0
+567,person063,question567,Conditional,no,residual plot,rep1,1,1,63,1,www/images/sleepstudy/v11_1.png,0
+568,person064,question568,Conditional,no,QQ-plot,rep2,1,2,64,2,www/images/sleepstudy/v12_2.png,0
+569,person064,question569,Conditional,yes,QQ-plot,rep2,2,2,64,2,www/images/sleepstudy/v22_2.png,0
+570,person064,question570,Least-confounded,yes,QQ-plot,rep2,2,2,64,3,www/images/sleepstudy/v22_3.png,0
+571,person064,question571,Conditional,yes,residual plot,rep2,2,2,64,1,www/images/sleepstudy/v22_1.png,0
+572,person064,question572,Least-confounded,yes,residual plot,rep2,2,2,64,4,www/images/sleepstudy/v22_4.png,0
+573,person064,question573,control,control,control,rep2,NA,2,64,NA,www/images/sleepstudy/vNA2_NA.png,0
+574,person064,question574,Least-confounded,no,residual plot,rep2,1,2,64,4,www/images/sleepstudy/v12_4.png,0
+575,person064,question575,Conditional,no,residual plot,rep2,1,2,64,1,www/images/sleepstudy/v12_1.png,0
+576,person064,question576,Least-confounded,no,QQ-plot,rep2,1,2,64,3,www/images/sleepstudy/v12_3.png,0
+577,person065,question577,Conditional,yes,residual plot,rep3,2,3,65,1,www/images/sleepstudy/v23_1.png,0
+578,person065,question578,Least-confounded,yes,residual plot,rep3,2,3,65,4,www/images/sleepstudy/v23_4.png,0
+579,person065,question579,Conditional,no,QQ-plot,rep3,1,3,65,2,www/images/sleepstudy/v13_2.png,0
+580,person065,question580,Least-confounded,no,QQ-plot,rep3,1,3,65,3,www/images/sleepstudy/v13_3.png,0
+581,person065,question581,Conditional,no,residual plot,rep3,1,3,65,1,www/images/sleepstudy/v13_1.png,0
+582,person065,question582,Least-confounded,yes,QQ-plot,rep3,2,3,65,3,www/images/sleepstudy/v23_3.png,0
+583,person065,question583,Least-confounded,no,residual plot,rep3,1,3,65,4,www/images/sleepstudy/v13_4.png,0
+584,person065,question584,Conditional,yes,QQ-plot,rep3,2,3,65,2,www/images/sleepstudy/v23_2.png,0
+585,person065,question585,control,control,control,rep3,NA,3,65,NA,www/images/sleepstudy/vNA3_NA.png,0
+586,person066,question586,Least-confounded,yes,QQ-plot,rep5,2,5,66,3,www/images/sleepstudy/v25_3.png,0
+587,person066,question587,control,control,control,rep5,NA,5,66,NA,www/images/sleepstudy/vNA5_NA.png,0
+588,person066,question588,Conditional,no,residual plot,rep5,1,5,66,1,www/images/sleepstudy/v15_1.png,0
+589,person066,question589,Conditional,yes,QQ-plot,rep5,2,5,66,2,www/images/sleepstudy/v25_2.png,0
+590,person066,question590,Least-confounded,yes,residual plot,rep5,2,5,66,4,www/images/sleepstudy/v25_4.png,0
+591,person066,question591,Least-confounded,no,residual plot,rep5,1,5,66,4,www/images/sleepstudy/v15_4.png,0
+592,person066,question592,Least-confounded,no,QQ-plot,rep5,1,5,66,3,www/images/sleepstudy/v15_3.png,0
+593,person066,question593,Conditional,yes,residual plot,rep5,2,5,66,1,www/images/sleepstudy/v25_1.png,0
+594,person066,question594,Conditional,no,QQ-plot,rep5,1,5,66,2,www/images/sleepstudy/v15_2.png,0
+595,person067,question595,control,control,control,rep2,NA,2,67,NA,www/images/sleepstudy/vNA2_NA.png,0
+596,person067,question596,Conditional,no,residual plot,rep2,1,2,67,1,www/images/sleepstudy/v12_1.png,0
+597,person067,question597,Conditional,yes,residual plot,rep2,2,2,67,1,www/images/sleepstudy/v22_1.png,0
+598,person067,question598,Least-confounded,yes,residual plot,rep2,2,2,67,4,www/images/sleepstudy/v22_4.png,0
+599,person067,question599,Least-confounded,yes,QQ-plot,rep2,2,2,67,3,www/images/sleepstudy/v22_3.png,0
+600,person067,question600,Conditional,yes,QQ-plot,rep2,2,2,67,2,www/images/sleepstudy/v22_2.png,0
+601,person067,question601,Least-confounded,no,QQ-plot,rep2,1,2,67,3,www/images/sleepstudy/v12_3.png,0
+602,person067,question602,Conditional,no,QQ-plot,rep2,1,2,67,2,www/images/sleepstudy/v12_2.png,0
+603,person067,question603,Least-confounded,no,residual plot,rep2,1,2,67,4,www/images/sleepstudy/v12_4.png,0
+604,person068,question604,Conditional,no,residual plot,rep3,1,3,68,1,www/images/sleepstudy/v13_1.png,0
+605,person068,question605,Least-confounded,yes,residual plot,rep3,2,3,68,4,www/images/sleepstudy/v23_4.png,0
+606,person068,question606,Conditional,yes,residual plot,rep3,2,3,68,1,www/images/sleepstudy/v23_1.png,0
+607,person068,question607,Conditional,yes,QQ-plot,rep3,2,3,68,2,www/images/sleepstudy/v23_2.png,0
+608,person068,question608,Least-confounded,yes,QQ-plot,rep3,2,3,68,3,www/images/sleepstudy/v23_3.png,0
+609,person068,question609,Conditional,no,QQ-plot,rep3,1,3,68,2,www/images/sleepstudy/v13_2.png,0
+610,person068,question610,Least-confounded,no,QQ-plot,rep3,1,3,68,3,www/images/sleepstudy/v13_3.png,0
+611,person068,question611,control,control,control,rep3,NA,3,68,NA,www/images/sleepstudy/vNA3_NA.png,0
+612,person068,question612,Least-confounded,no,residual plot,rep3,1,3,68,4,www/images/sleepstudy/v13_4.png,0
+613,person069,question613,Conditional,yes,residual plot,rep2,2,2,69,1,www/images/sleepstudy/v22_1.png,0
+614,person069,question614,Conditional,no,residual plot,rep2,1,2,69,1,www/images/sleepstudy/v12_1.png,0
+615,person069,question615,control,control,control,rep2,NA,2,69,NA,www/images/sleepstudy/vNA2_NA.png,0
+616,person069,question616,Least-confounded,no,residual plot,rep2,1,2,69,4,www/images/sleepstudy/v12_4.png,0
+617,person069,question617,Least-confounded,yes,QQ-plot,rep2,2,2,69,3,www/images/sleepstudy/v22_3.png,0
+618,person069,question618,Conditional,no,QQ-plot,rep2,1,2,69,2,www/images/sleepstudy/v12_2.png,0
+619,person069,question619,Least-confounded,no,QQ-plot,rep2,1,2,69,3,www/images/sleepstudy/v12_3.png,0
+620,person069,question620,Least-confounded,yes,residual plot,rep2,2,2,69,4,www/images/sleepstudy/v22_4.png,0
+621,person069,question621,Conditional,yes,QQ-plot,rep2,2,2,69,2,www/images/sleepstudy/v22_2.png,0
+622,person070,question622,Conditional,no,residual plot,rep2,1,2,70,1,www/images/sleepstudy/v12_1.png,0
+623,person070,question623,Conditional,no,QQ-plot,rep2,1,2,70,2,www/images/sleepstudy/v12_2.png,0
+624,person070,question624,Conditional,yes,QQ-plot,rep2,2,2,70,2,www/images/sleepstudy/v22_2.png,0
+625,person070,question625,Least-confounded,no,residual plot,rep2,1,2,70,4,www/images/sleepstudy/v12_4.png,0
+626,person070,question626,Least-confounded,yes,QQ-plot,rep2,2,2,70,3,www/images/sleepstudy/v22_3.png,0
+627,person070,question627,control,control,control,rep2,NA,2,70,NA,www/images/sleepstudy/vNA2_NA.png,0
+628,person070,question628,Conditional,yes,residual plot,rep2,2,2,70,1,www/images/sleepstudy/v22_1.png,0
+629,person070,question629,Least-confounded,yes,residual plot,rep2,2,2,70,4,www/images/sleepstudy/v22_4.png,0
+630,person070,question630,Least-confounded,no,QQ-plot,rep2,1,2,70,3,www/images/sleepstudy/v12_3.png,0
+631,person071,question631,Conditional,yes,residual plot,rep5,2,5,71,1,www/images/sleepstudy/v25_1.png,0
+632,person071,question632,Conditional,yes,QQ-plot,rep5,2,5,71,2,www/images/sleepstudy/v25_2.png,0
+633,person071,question633,Conditional,no,residual plot,rep5,1,5,71,1,www/images/sleepstudy/v15_1.png,0
+634,person071,question634,Least-confounded,yes,residual plot,rep5,2,5,71,4,www/images/sleepstudy/v25_4.png,0
+635,person071,question635,control,control,control,rep5,NA,5,71,NA,www/images/sleepstudy/vNA5_NA.png,0
+636,person071,question636,Least-confounded,yes,QQ-plot,rep5,2,5,71,3,www/images/sleepstudy/v25_3.png,0
+637,person071,question637,Conditional,no,QQ-plot,rep5,1,5,71,2,www/images/sleepstudy/v15_2.png,0
+638,person071,question638,Least-confounded,no,QQ-plot,rep5,1,5,71,3,www/images/sleepstudy/v15_3.png,0
+639,person071,question639,Least-confounded,no,residual plot,rep5,1,5,71,4,www/images/sleepstudy/v15_4.png,0
+640,person072,question640,control,control,control,rep3,NA,3,72,NA,www/images/sleepstudy/vNA3_NA.png,0
+641,person072,question641,Least-confounded,yes,residual plot,rep3,2,3,72,4,www/images/sleepstudy/v23_4.png,0
+642,person072,question642,Least-confounded,no,QQ-plot,rep3,1,3,72,3,www/images/sleepstudy/v13_3.png,0
+643,person072,question643,Conditional,no,QQ-plot,rep3,1,3,72,2,www/images/sleepstudy/v13_2.png,0
+644,person072,question644,Conditional,yes,QQ-plot,rep3,2,3,72,2,www/images/sleepstudy/v23_2.png,0
+645,person072,question645,Conditional,yes,residual plot,rep3,2,3,72,1,www/images/sleepstudy/v23_1.png,0
+646,person072,question646,Conditional,no,residual plot,rep3,1,3,72,1,www/images/sleepstudy/v13_1.png,0
+647,person072,question647,Least-confounded,no,residual plot,rep3,1,3,72,4,www/images/sleepstudy/v13_4.png,0
+648,person072,question648,Least-confounded,yes,QQ-plot,rep3,2,3,72,3,www/images/sleepstudy/v23_3.png,0
+649,person073,question649,Least-confounded,yes,QQ-plot,rep1,2,1,73,3,www/images/sleepstudy/v21_3.png,0
+650,person073,question650,Least-confounded,yes,residual plot,rep1,2,1,73,4,www/images/sleepstudy/v21_4.png,0
+651,person073,question651,Least-confounded,no,QQ-plot,rep1,1,1,73,3,www/images/sleepstudy/v11_3.png,0
+652,person073,question652,Conditional,no,QQ-plot,rep1,1,1,73,2,www/images/sleepstudy/v11_2.png,0
+653,person073,question653,Conditional,no,residual plot,rep1,1,1,73,1,www/images/sleepstudy/v11_1.png,0
+654,person073,question654,Least-confounded,no,residual plot,rep1,1,1,73,4,www/images/sleepstudy/v11_4.png,0
+655,person073,question655,Conditional,yes,residual plot,rep1,2,1,73,1,www/images/sleepstudy/v21_1.png,0
+656,person073,question656,control,control,control,rep1,NA,1,73,NA,www/images/sleepstudy/vNA1_NA.png,0
+657,person073,question657,Conditional,yes,QQ-plot,rep1,2,1,73,2,www/images/sleepstudy/v21_2.png,0
+658,person074,question658,Conditional,yes,residual plot,rep2,2,2,74,1,www/images/sleepstudy/v22_1.png,0
+659,person074,question659,Least-confounded,no,QQ-plot,rep2,1,2,74,3,www/images/sleepstudy/v12_3.png,0
+660,person074,question660,Least-confounded,yes,QQ-plot,rep2,2,2,74,3,www/images/sleepstudy/v22_3.png,0
+661,person074,question661,Least-confounded,no,residual plot,rep2,1,2,74,4,www/images/sleepstudy/v12_4.png,0
+662,person074,question662,Conditional,no,QQ-plot,rep2,1,2,74,2,www/images/sleepstudy/v12_2.png,0
+663,person074,question663,Conditional,no,residual plot,rep2,1,2,74,1,www/images/sleepstudy/v12_1.png,0
+664,person074,question664,Least-confounded,yes,residual plot,rep2,2,2,74,4,www/images/sleepstudy/v22_4.png,0
+665,person074,question665,control,control,control,rep2,NA,2,74,NA,www/images/sleepstudy/vNA2_NA.png,0
+666,person074,question666,Conditional,yes,QQ-plot,rep2,2,2,74,2,www/images/sleepstudy/v22_2.png,0
+667,person075,question667,Least-confounded,yes,residual plot,rep2,2,2,75,4,www/images/sleepstudy/v22_4.png,0
+668,person075,question668,Least-confounded,no,residual plot,rep2,1,2,75,4,www/images/sleepstudy/v12_4.png,0
+669,person075,question669,Conditional,no,QQ-plot,rep2,1,2,75,2,www/images/sleepstudy/v12_2.png,0
+670,person075,question670,Conditional,no,residual plot,rep2,1,2,75,1,www/images/sleepstudy/v12_1.png,0
+671,person075,question671,Conditional,yes,QQ-plot,rep2,2,2,75,2,www/images/sleepstudy/v22_2.png,0
+672,person075,question672,control,control,control,rep2,NA,2,75,NA,www/images/sleepstudy/vNA2_NA.png,0
+673,person075,question673,Least-confounded,yes,QQ-plot,rep2,2,2,75,3,www/images/sleepstudy/v22_3.png,0
+674,person075,question674,Conditional,yes,residual plot,rep2,2,2,75,1,www/images/sleepstudy/v22_1.png,0
+675,person075,question675,Least-confounded,no,QQ-plot,rep2,1,2,75,3,www/images/sleepstudy/v12_3.png,0
+676,person076,question676,Least-confounded,no,QQ-plot,rep1,1,1,76,3,www/images/sleepstudy/v11_3.png,0
+677,person076,question677,Least-confounded,yes,residual plot,rep1,2,1,76,4,www/images/sleepstudy/v21_4.png,0
+678,person076,question678,Least-confounded,yes,QQ-plot,rep1,2,1,76,3,www/images/sleepstudy/v21_3.png,0
+679,person076,question679,control,control,control,rep1,NA,1,76,NA,www/images/sleepstudy/vNA1_NA.png,0
+680,person076,question680,Conditional,yes,residual plot,rep1,2,1,76,1,www/images/sleepstudy/v21_1.png,0
+681,person076,question681,Conditional,yes,QQ-plot,rep1,2,1,76,2,www/images/sleepstudy/v21_2.png,0
+682,person076,question682,Conditional,no,residual plot,rep1,1,1,76,1,www/images/sleepstudy/v11_1.png,0
+683,person076,question683,Conditional,no,QQ-plot,rep1,1,1,76,2,www/images/sleepstudy/v11_2.png,0
+684,person076,question684,Least-confounded,no,residual plot,rep1,1,1,76,4,www/images/sleepstudy/v11_4.png,0
+685,person077,question685,Least-confounded,yes,residual plot,rep3,2,3,77,4,www/images/sleepstudy/v23_4.png,0
+686,person077,question686,Conditional,no,QQ-plot,rep3,1,3,77,2,www/images/sleepstudy/v13_2.png,0
+687,person077,question687,Conditional,no,residual plot,rep3,1,3,77,1,www/images/sleepstudy/v13_1.png,0
+688,person077,question688,Least-confounded,no,QQ-plot,rep3,1,3,77,3,www/images/sleepstudy/v13_3.png,0
+689,person077,question689,Conditional,yes,QQ-plot,rep3,2,3,77,2,www/images/sleepstudy/v23_2.png,0
+690,person077,question690,control,control,control,rep3,NA,3,77,NA,www/images/sleepstudy/vNA3_NA.png,0
+691,person077,question691,Least-confounded,no,residual plot,rep3,1,3,77,4,www/images/sleepstudy/v13_4.png,0
+692,person077,question692,Conditional,yes,residual plot,rep3,2,3,77,1,www/images/sleepstudy/v23_1.png,0
+693,person077,question693,Least-confounded,yes,QQ-plot,rep3,2,3,77,3,www/images/sleepstudy/v23_3.png,0
+694,person078,question694,Conditional,yes,QQ-plot,rep4,2,4,78,2,www/images/sleepstudy/v24_2.png,0
+695,person078,question695,control,control,control,rep4,NA,4,78,NA,www/images/sleepstudy/vNA4_NA.png,0
+696,person078,question696,Least-confounded,no,QQ-plot,rep4,1,4,78,3,www/images/sleepstudy/v14_3.png,0
+697,person078,question697,Conditional,yes,residual plot,rep4,2,4,78,1,www/images/sleepstudy/v24_1.png,0
+698,person078,question698,Least-confounded,no,residual plot,rep4,1,4,78,4,www/images/sleepstudy/v14_4.png,0
+699,person078,question699,Conditional,no,residual plot,rep4,1,4,78,1,www/images/sleepstudy/v14_1.png,0
+700,person078,question700,Least-confounded,yes,QQ-plot,rep4,2,4,78,3,www/images/sleepstudy/v24_3.png,0
+701,person078,question701,Conditional,no,QQ-plot,rep4,1,4,78,2,www/images/sleepstudy/v14_2.png,0
+702,person078,question702,Least-confounded,yes,residual plot,rep4,2,4,78,4,www/images/sleepstudy/v24_4.png,0
+703,person079,question703,Conditional,no,residual plot,rep5,1,5,79,1,www/images/sleepstudy/v15_1.png,0
+704,person079,question704,Conditional,yes,residual plot,rep5,2,5,79,1,www/images/sleepstudy/v25_1.png,0
+705,person079,question705,Least-confounded,no,residual plot,rep5,1,5,79,4,www/images/sleepstudy/v15_4.png,0
+706,person079,question706,Conditional,yes,QQ-plot,rep5,2,5,79,2,www/images/sleepstudy/v25_2.png,0
+707,person079,question707,control,control,control,rep5,NA,5,79,NA,www/images/sleepstudy/vNA5_NA.png,0
+708,person079,question708,Conditional,no,QQ-plot,rep5,1,5,79,2,www/images/sleepstudy/v15_2.png,0
+709,person079,question709,Least-confounded,no,QQ-plot,rep5,1,5,79,3,www/images/sleepstudy/v15_3.png,0
+710,person079,question710,Least-confounded,yes,residual plot,rep5,2,5,79,4,www/images/sleepstudy/v25_4.png,0
+711,person079,question711,Least-confounded,yes,QQ-plot,rep5,2,5,79,3,www/images/sleepstudy/v25_3.png,0
+712,person080,question712,Least-confounded,no,residual plot,rep2,1,2,80,4,www/images/sleepstudy/v12_4.png,0
+713,person080,question713,Conditional,yes,residual plot,rep2,2,2,80,1,www/images/sleepstudy/v22_1.png,0
+714,person080,question714,Conditional,no,QQ-plot,rep2,1,2,80,2,www/images/sleepstudy/v12_2.png,0
+715,person080,question715,Conditional,yes,QQ-plot,rep2,2,2,80,2,www/images/sleepstudy/v22_2.png,0
+716,person080,question716,Conditional,no,residual plot,rep2,1,2,80,1,www/images/sleepstudy/v12_1.png,0
+717,person080,question717,Least-confounded,yes,residual plot,rep2,2,2,80,4,www/images/sleepstudy/v22_4.png,0
+718,person080,question718,Least-confounded,no,QQ-plot,rep2,1,2,80,3,www/images/sleepstudy/v12_3.png,0
+719,person080,question719,Least-confounded,yes,QQ-plot,rep2,2,2,80,3,www/images/sleepstudy/v22_3.png,0
+720,person080,question720,control,control,control,rep2,NA,2,80,NA,www/images/sleepstudy/vNA2_NA.png,0
+721,person081,question721,Conditional,no,residual plot,rep2,1,2,81,1,www/images/sleepstudy/v12_1.png,0
+722,person081,question722,Least-confounded,no,QQ-plot,rep2,1,2,81,3,www/images/sleepstudy/v12_3.png,0
+723,person081,question723,Conditional,yes,QQ-plot,rep2,2,2,81,2,www/images/sleepstudy/v22_2.png,0
+724,person081,question724,Conditional,no,QQ-plot,rep2,1,2,81,2,www/images/sleepstudy/v12_2.png,0
+725,person081,question725,Conditional,yes,residual plot,rep2,2,2,81,1,www/images/sleepstudy/v22_1.png,0
+726,person081,question726,Least-confounded,yes,QQ-plot,rep2,2,2,81,3,www/images/sleepstudy/v22_3.png,0
+727,person081,question727,control,control,control,rep2,NA,2,81,NA,www/images/sleepstudy/vNA2_NA.png,0
+728,person081,question728,Least-confounded,no,residual plot,rep2,1,2,81,4,www/images/sleepstudy/v12_4.png,0
+729,person081,question729,Least-confounded,yes,residual plot,rep2,2,2,81,4,www/images/sleepstudy/v22_4.png,0
+730,person082,question730,Conditional,yes,residual plot,rep1,2,1,82,1,www/images/sleepstudy/v21_1.png,0
+731,person082,question731,Least-confounded,no,residual plot,rep1,1,1,82,4,www/images/sleepstudy/v11_4.png,0
+732,person082,question732,Least-confounded,no,QQ-plot,rep1,1,1,82,3,www/images/sleepstudy/v11_3.png,0
+733,person082,question733,Least-confounded,yes,residual plot,rep1,2,1,82,4,www/images/sleepstudy/v21_4.png,0
+734,person082,question734,control,control,control,rep1,NA,1,82,NA,www/images/sleepstudy/vNA1_NA.png,0
+735,person082,question735,Least-confounded,yes,QQ-plot,rep1,2,1,82,3,www/images/sleepstudy/v21_3.png,0
+736,person082,question736,Conditional,no,QQ-plot,rep1,1,1,82,2,www/images/sleepstudy/v11_2.png,0
+737,person082,question737,Conditional,yes,QQ-plot,rep1,2,1,82,2,www/images/sleepstudy/v21_2.png,0
+738,person082,question738,Conditional,no,residual plot,rep1,1,1,82,1,www/images/sleepstudy/v11_1.png,0
+739,person083,question739,Conditional,no,QQ-plot,rep4,1,4,83,2,www/images/sleepstudy/v14_2.png,0
+740,person083,question740,Conditional,no,residual plot,rep4,1,4,83,1,www/images/sleepstudy/v14_1.png,0
+741,person083,question741,Least-confounded,no,QQ-plot,rep4,1,4,83,3,www/images/sleepstudy/v14_3.png,0
+742,person083,question742,Least-confounded,no,residual plot,rep4,1,4,83,4,www/images/sleepstudy/v14_4.png,0
+743,person083,question743,Least-confounded,yes,residual plot,rep4,2,4,83,4,www/images/sleepstudy/v24_4.png,0
+744,person083,question744,Conditional,yes,residual plot,rep4,2,4,83,1,www/images/sleepstudy/v24_1.png,0
+745,person083,question745,Conditional,yes,QQ-plot,rep4,2,4,83,2,www/images/sleepstudy/v24_2.png,0
+746,person083,question746,control,control,control,rep4,NA,4,83,NA,www/images/sleepstudy/vNA4_NA.png,0
+747,person083,question747,Least-confounded,yes,QQ-plot,rep4,2,4,83,3,www/images/sleepstudy/v24_3.png,0
+748,person084,question748,Least-confounded,yes,QQ-plot,rep4,2,4,84,3,www/images/sleepstudy/v24_3.png,0
+749,person084,question749,Conditional,yes,QQ-plot,rep4,2,4,84,2,www/images/sleepstudy/v24_2.png,0
+750,person084,question750,Least-confounded,yes,residual plot,rep4,2,4,84,4,www/images/sleepstudy/v24_4.png,0
+751,person084,question751,Conditional,yes,residual plot,rep4,2,4,84,1,www/images/sleepstudy/v24_1.png,0
+752,person084,question752,control,control,control,rep4,NA,4,84,NA,www/images/sleepstudy/vNA4_NA.png,0
+753,person084,question753,Least-confounded,no,QQ-plot,rep4,1,4,84,3,www/images/sleepstudy/v14_3.png,0
+754,person084,question754,Least-confounded,no,residual plot,rep4,1,4,84,4,www/images/sleepstudy/v14_4.png,0
+755,person084,question755,Conditional,no,residual plot,rep4,1,4,84,1,www/images/sleepstudy/v14_1.png,0
+756,person084,question756,Conditional,no,QQ-plot,rep4,1,4,84,2,www/images/sleepstudy/v14_2.png,0
+757,person085,question757,Least-confounded,no,QQ-plot,rep5,1,5,85,3,www/images/sleepstudy/v15_3.png,0
+758,person085,question758,Conditional,no,residual plot,rep5,1,5,85,1,www/images/sleepstudy/v15_1.png,0
+759,person085,question759,control,control,control,rep5,NA,5,85,NA,www/images/sleepstudy/vNA5_NA.png,0
+760,person085,question760,Conditional,no,QQ-plot,rep5,1,5,85,2,www/images/sleepstudy/v15_2.png,0
+761,person085,question761,Least-confounded,yes,residual plot,rep5,2,5,85,4,www/images/sleepstudy/v25_4.png,0
+762,person085,question762,Least-confounded,no,residual plot,rep5,1,5,85,4,www/images/sleepstudy/v15_4.png,0
+763,person085,question763,Conditional,yes,QQ-plot,rep5,2,5,85,2,www/images/sleepstudy/v25_2.png,0
+764,person085,question764,Least-confounded,yes,QQ-plot,rep5,2,5,85,3,www/images/sleepstudy/v25_3.png,0
+765,person085,question765,Conditional,yes,residual plot,rep5,2,5,85,1,www/images/sleepstudy/v25_1.png,0
+766,person086,question766,Conditional,no,residual plot,rep4,1,4,86,1,www/images/sleepstudy/v14_1.png,0
+767,person086,question767,Conditional,no,QQ-plot,rep4,1,4,86,2,www/images/sleepstudy/v14_2.png,0
+768,person086,question768,Least-confounded,yes,QQ-plot,rep4,2,4,86,3,www/images/sleepstudy/v24_3.png,0
+769,person086,question769,Conditional,yes,residual plot,rep4,2,4,86,1,www/images/sleepstudy/v24_1.png,0
+770,person086,question770,Least-confounded,no,residual plot,rep4,1,4,86,4,www/images/sleepstudy/v14_4.png,0
+771,person086,question771,control,control,control,rep4,NA,4,86,NA,www/images/sleepstudy/vNA4_NA.png,0
+772,person086,question772,Conditional,yes,QQ-plot,rep4,2,4,86,2,www/images/sleepstudy/v24_2.png,0
+773,person086,question773,Least-confounded,yes,residual plot,rep4,2,4,86,4,www/images/sleepstudy/v24_4.png,0
+774,person086,question774,Least-confounded,no,QQ-plot,rep4,1,4,86,3,www/images/sleepstudy/v14_3.png,0
+775,person087,question775,Conditional,no,residual plot,rep4,1,4,87,1,www/images/sleepstudy/v14_1.png,0
+776,person087,question776,Conditional,no,QQ-plot,rep4,1,4,87,2,www/images/sleepstudy/v14_2.png,0
+777,person087,question777,Conditional,yes,QQ-plot,rep4,2,4,87,2,www/images/sleepstudy/v24_2.png,0
+778,person087,question778,control,control,control,rep4,NA,4,87,NA,www/images/sleepstudy/vNA4_NA.png,0
+779,person087,question779,Conditional,yes,residual plot,rep4,2,4,87,1,www/images/sleepstudy/v24_1.png,0
+780,person087,question780,Least-confounded,no,residual plot,rep4,1,4,87,4,www/images/sleepstudy/v14_4.png,0
+781,person087,question781,Least-confounded,no,QQ-plot,rep4,1,4,87,3,www/images/sleepstudy/v14_3.png,0
+782,person087,question782,Least-confounded,yes,QQ-plot,rep4,2,4,87,3,www/images/sleepstudy/v24_3.png,0
+783,person087,question783,Least-confounded,yes,residual plot,rep4,2,4,87,4,www/images/sleepstudy/v24_4.png,0
+784,person088,question784,Conditional,yes,residual plot,rep2,2,2,88,1,www/images/sleepstudy/v22_1.png,0
+785,person088,question785,control,control,control,rep2,NA,2,88,NA,www/images/sleepstudy/vNA2_NA.png,0
+786,person088,question786,Least-confounded,yes,residual plot,rep2,2,2,88,4,www/images/sleepstudy/v22_4.png,0
+787,person088,question787,Conditional,no,QQ-plot,rep2,1,2,88,2,www/images/sleepstudy/v12_2.png,0
+788,person088,question788,Conditional,yes,QQ-plot,rep2,2,2,88,2,www/images/sleepstudy/v22_2.png,0
+789,person088,question789,Least-confounded,yes,QQ-plot,rep2,2,2,88,3,www/images/sleepstudy/v22_3.png,0
+790,person088,question790,Conditional,no,residual plot,rep2,1,2,88,1,www/images/sleepstudy/v12_1.png,0
+791,person088,question791,Least-confounded,no,residual plot,rep2,1,2,88,4,www/images/sleepstudy/v12_4.png,0
+792,person088,question792,Least-confounded,no,QQ-plot,rep2,1,2,88,3,www/images/sleepstudy/v12_3.png,0
+793,person089,question793,Conditional,yes,residual plot,rep4,2,4,89,1,www/images/sleepstudy/v24_1.png,0
+794,person089,question794,Least-confounded,no,residual plot,rep4,1,4,89,4,www/images/sleepstudy/v14_4.png,0
+795,person089,question795,Least-confounded,no,QQ-plot,rep4,1,4,89,3,www/images/sleepstudy/v14_3.png,0
+796,person089,question796,Least-confounded,yes,QQ-plot,rep4,2,4,89,3,www/images/sleepstudy/v24_3.png,0
+797,person089,question797,Conditional,yes,QQ-plot,rep4,2,4,89,2,www/images/sleepstudy/v24_2.png,0
+798,person089,question798,Conditional,no,residual plot,rep4,1,4,89,1,www/images/sleepstudy/v14_1.png,0
+799,person089,question799,Least-confounded,yes,residual plot,rep4,2,4,89,4,www/images/sleepstudy/v24_4.png,0
+800,person089,question800,Conditional,no,QQ-plot,rep4,1,4,89,2,www/images/sleepstudy/v14_2.png,0
+801,person089,question801,control,control,control,rep4,NA,4,89,NA,www/images/sleepstudy/vNA4_NA.png,0
+802,person090,question802,Least-confounded,yes,residual plot,rep5,2,5,90,4,www/images/sleepstudy/v25_4.png,0
+803,person090,question803,Least-confounded,yes,QQ-plot,rep5,2,5,90,3,www/images/sleepstudy/v25_3.png,0
+804,person090,question804,Conditional,no,residual plot,rep5,1,5,90,1,www/images/sleepstudy/v15_1.png,0
+805,person090,question805,control,control,control,rep5,NA,5,90,NA,www/images/sleepstudy/vNA5_NA.png,0
+806,person090,question806,Conditional,yes,residual plot,rep5,2,5,90,1,www/images/sleepstudy/v25_1.png,0
+807,person090,question807,Conditional,yes,QQ-plot,rep5,2,5,90,2,www/images/sleepstudy/v25_2.png,0
+808,person090,question808,Conditional,no,QQ-plot,rep5,1,5,90,2,www/images/sleepstudy/v15_2.png,0
+809,person090,question809,Least-confounded,no,residual plot,rep5,1,5,90,4,www/images/sleepstudy/v15_4.png,0
+810,person090,question810,Least-confounded,no,QQ-plot,rep5,1,5,90,3,www/images/sleepstudy/v15_3.png,0
+811,person091,question811,Least-confounded,no,QQ-plot,rep1,1,1,91,3,www/images/sleepstudy/v11_3.png,0
+812,person091,question812,Least-confounded,yes,QQ-plot,rep1,2,1,91,3,www/images/sleepstudy/v21_3.png,0
+813,person091,question813,Conditional,yes,residual plot,rep1,2,1,91,1,www/images/sleepstudy/v21_1.png,0
+814,person091,question814,control,control,control,rep1,NA,1,91,NA,www/images/sleepstudy/vNA1_NA.png,0
+815,person091,question815,Conditional,yes,QQ-plot,rep1,2,1,91,2,www/images/sleepstudy/v21_2.png,0
+816,person091,question816,Least-confounded,yes,residual plot,rep1,2,1,91,4,www/images/sleepstudy/v21_4.png,0
+817,person091,question817,Least-confounded,no,residual plot,rep1,1,1,91,4,www/images/sleepstudy/v11_4.png,0
+818,person091,question818,Conditional,no,residual plot,rep1,1,1,91,1,www/images/sleepstudy/v11_1.png,0
+819,person091,question819,Conditional,no,QQ-plot,rep1,1,1,91,2,www/images/sleepstudy/v11_2.png,0
+820,person092,question820,Least-confounded,no,residual plot,rep5,1,5,92,4,www/images/sleepstudy/v15_4.png,0
+821,person092,question821,Least-confounded,no,QQ-plot,rep5,1,5,92,3,www/images/sleepstudy/v15_3.png,0
+822,person092,question822,control,control,control,rep5,NA,5,92,NA,www/images/sleepstudy/vNA5_NA.png,0
+823,person092,question823,Conditional,no,residual plot,rep5,1,5,92,1,www/images/sleepstudy/v15_1.png,0
+824,person092,question824,Conditional,yes,QQ-plot,rep5,2,5,92,2,www/images/sleepstudy/v25_2.png,0
+825,person092,question825,Conditional,yes,residual plot,rep5,2,5,92,1,www/images/sleepstudy/v25_1.png,0
+826,person092,question826,Least-confounded,yes,residual plot,rep5,2,5,92,4,www/images/sleepstudy/v25_4.png,0
+827,person092,question827,Least-confounded,yes,QQ-plot,rep5,2,5,92,3,www/images/sleepstudy/v25_3.png,0
+828,person092,question828,Conditional,no,QQ-plot,rep5,1,5,92,2,www/images/sleepstudy/v15_2.png,0
+829,person093,question829,Least-confounded,no,QQ-plot,rep5,1,5,93,3,www/images/sleepstudy/v15_3.png,0
+830,person093,question830,Conditional,no,residual plot,rep5,1,5,93,1,www/images/sleepstudy/v15_1.png,0
+831,person093,question831,control,control,control,rep5,NA,5,93,NA,www/images/sleepstudy/vNA5_NA.png,0
+832,person093,question832,Conditional,yes,QQ-plot,rep5,2,5,93,2,www/images/sleepstudy/v25_2.png,0
+833,person093,question833,Conditional,yes,residual plot,rep5,2,5,93,1,www/images/sleepstudy/v25_1.png,0
+834,person093,question834,Least-confounded,yes,QQ-plot,rep5,2,5,93,3,www/images/sleepstudy/v25_3.png,0
+835,person093,question835,Least-confounded,yes,residual plot,rep5,2,5,93,4,www/images/sleepstudy/v25_4.png,0
+836,person093,question836,Least-confounded,no,residual plot,rep5,1,5,93,4,www/images/sleepstudy/v15_4.png,0
+837,person093,question837,Conditional,no,QQ-plot,rep5,1,5,93,2,www/images/sleepstudy/v15_2.png,0
+838,person094,question838,Least-confounded,yes,QQ-plot,rep3,2,3,94,3,www/images/sleepstudy/v23_3.png,0
+839,person094,question839,Conditional,yes,residual plot,rep3,2,3,94,1,www/images/sleepstudy/v23_1.png,0
+840,person094,question840,control,control,control,rep3,NA,3,94,NA,www/images/sleepstudy/vNA3_NA.png,0
+841,person094,question841,Conditional,no,QQ-plot,rep3,1,3,94,2,www/images/sleepstudy/v13_2.png,0
+842,person094,question842,Conditional,no,residual plot,rep3,1,3,94,1,www/images/sleepstudy/v13_1.png,0
+843,person094,question843,Least-confounded,no,residual plot,rep3,1,3,94,4,www/images/sleepstudy/v13_4.png,0
+844,person094,question844,Least-confounded,yes,residual plot,rep3,2,3,94,4,www/images/sleepstudy/v23_4.png,0
+845,person094,question845,Least-confounded,no,QQ-plot,rep3,1,3,94,3,www/images/sleepstudy/v13_3.png,0
+846,person094,question846,Conditional,yes,QQ-plot,rep3,2,3,94,2,www/images/sleepstudy/v23_2.png,0
+847,person095,question847,Least-confounded,no,residual plot,rep3,1,3,95,4,www/images/sleepstudy/v13_4.png,0
+848,person095,question848,Least-confounded,no,QQ-plot,rep3,1,3,95,3,www/images/sleepstudy/v13_3.png,0
+849,person095,question849,Conditional,no,residual plot,rep3,1,3,95,1,www/images/sleepstudy/v13_1.png,0
+850,person095,question850,Conditional,no,QQ-plot,rep3,1,3,95,2,www/images/sleepstudy/v13_2.png,0
+851,person095,question851,Conditional,yes,QQ-plot,rep3,2,3,95,2,www/images/sleepstudy/v23_2.png,0
+852,person095,question852,Conditional,yes,residual plot,rep3,2,3,95,1,www/images/sleepstudy/v23_1.png,0
+853,person095,question853,control,control,control,rep3,NA,3,95,NA,www/images/sleepstudy/vNA3_NA.png,0
+854,person095,question854,Least-confounded,yes,residual plot,rep3,2,3,95,4,www/images/sleepstudy/v23_4.png,0
+855,person095,question855,Least-confounded,yes,QQ-plot,rep3,2,3,95,3,www/images/sleepstudy/v23_3.png,0
+856,person096,question856,Conditional,no,residual plot,rep2,1,2,96,1,www/images/sleepstudy/v12_1.png,0
+857,person096,question857,Conditional,no,QQ-plot,rep2,1,2,96,2,www/images/sleepstudy/v12_2.png,0
+858,person096,question858,Least-confounded,no,residual plot,rep2,1,2,96,4,www/images/sleepstudy/v12_4.png,0
+859,person096,question859,Conditional,yes,residual plot,rep2,2,2,96,1,www/images/sleepstudy/v22_1.png,0
+860,person096,question860,Least-confounded,yes,QQ-plot,rep2,2,2,96,3,www/images/sleepstudy/v22_3.png,0
+861,person096,question861,Least-confounded,no,QQ-plot,rep2,1,2,96,3,www/images/sleepstudy/v12_3.png,0
+862,person096,question862,control,control,control,rep2,NA,2,96,NA,www/images/sleepstudy/vNA2_NA.png,0
+863,person096,question863,Conditional,yes,QQ-plot,rep2,2,2,96,2,www/images/sleepstudy/v22_2.png,0
+864,person096,question864,Least-confounded,yes,residual plot,rep2,2,2,96,4,www/images/sleepstudy/v22_4.png,0
+865,person097,question865,Conditional,yes,residual plot,rep1,2,1,97,1,www/images/sleepstudy/v21_1.png,0
+866,person097,question866,Conditional,no,QQ-plot,rep1,1,1,97,2,www/images/sleepstudy/v11_2.png,0
+867,person097,question867,Conditional,no,residual plot,rep1,1,1,97,1,www/images/sleepstudy/v11_1.png,0
+868,person097,question868,Least-confounded,yes,residual plot,rep1,2,1,97,4,www/images/sleepstudy/v21_4.png,0
+869,person097,question869,Conditional,yes,QQ-plot,rep1,2,1,97,2,www/images/sleepstudy/v21_2.png,0
+870,person097,question870,control,control,control,rep1,NA,1,97,NA,www/images/sleepstudy/vNA1_NA.png,0
+871,person097,question871,Least-confounded,no,residual plot,rep1,1,1,97,4,www/images/sleepstudy/v11_4.png,0
+872,person097,question872,Least-confounded,no,QQ-plot,rep1,1,1,97,3,www/images/sleepstudy/v11_3.png,0
+873,person097,question873,Least-confounded,yes,QQ-plot,rep1,2,1,97,3,www/images/sleepstudy/v21_3.png,0
+874,person098,question874,Conditional,yes,QQ-plot,rep1,2,1,98,2,www/images/sleepstudy/v21_2.png,0
+875,person098,question875,Least-confounded,no,residual plot,rep1,1,1,98,4,www/images/sleepstudy/v11_4.png,0
+876,person098,question876,Least-confounded,yes,residual plot,rep1,2,1,98,4,www/images/sleepstudy/v21_4.png,0
+877,person098,question877,Conditional,yes,residual plot,rep1,2,1,98,1,www/images/sleepstudy/v21_1.png,0
+878,person098,question878,Conditional,no,QQ-plot,rep1,1,1,98,2,www/images/sleepstudy/v11_2.png,0
+879,person098,question879,Least-confounded,no,QQ-plot,rep1,1,1,98,3,www/images/sleepstudy/v11_3.png,0
+880,person098,question880,Least-confounded,yes,QQ-plot,rep1,2,1,98,3,www/images/sleepstudy/v21_3.png,0
+881,person098,question881,control,control,control,rep1,NA,1,98,NA,www/images/sleepstudy/vNA1_NA.png,0
+882,person098,question882,Conditional,no,residual plot,rep1,1,1,98,1,www/images/sleepstudy/v11_1.png,0
+883,person099,question883,Least-confounded,yes,QQ-plot,rep4,2,4,99,3,www/images/sleepstudy/v24_3.png,0
+884,person099,question884,Least-confounded,no,QQ-plot,rep4,1,4,99,3,www/images/sleepstudy/v14_3.png,0
+885,person099,question885,Conditional,no,residual plot,rep4,1,4,99,1,www/images/sleepstudy/v14_1.png,0
+886,person099,question886,Conditional,yes,QQ-plot,rep4,2,4,99,2,www/images/sleepstudy/v24_2.png,0
+887,person099,question887,Conditional,no,QQ-plot,rep4,1,4,99,2,www/images/sleepstudy/v14_2.png,0
+888,person099,question888,Least-confounded,no,residual plot,rep4,1,4,99,4,www/images/sleepstudy/v14_4.png,0
+889,person099,question889,Conditional,yes,residual plot,rep4,2,4,99,1,www/images/sleepstudy/v24_1.png,0
+890,person099,question890,control,control,control,rep4,NA,4,99,NA,www/images/sleepstudy/vNA4_NA.png,0
+891,person099,question891,Least-confounded,yes,residual plot,rep4,2,4,99,4,www/images/sleepstudy/v24_4.png,0
+892,person0100,question892,Conditional,no,residual plot,rep3,1,3,100,1,www/images/sleepstudy/v13_1.png,0
+893,person0100,question893,Least-confounded,yes,QQ-plot,rep3,2,3,100,3,www/images/sleepstudy/v23_3.png,0
+894,person0100,question894,Conditional,yes,QQ-plot,rep3,2,3,100,2,www/images/sleepstudy/v23_2.png,0
+895,person0100,question895,control,control,control,rep3,NA,3,100,NA,www/images/sleepstudy/vNA3_NA.png,0
+896,person0100,question896,Conditional,no,QQ-plot,rep3,1,3,100,2,www/images/sleepstudy/v13_2.png,0
+897,person0100,question897,Least-confounded,no,residual plot,rep3,1,3,100,4,www/images/sleepstudy/v13_4.png,0
+898,person0100,question898,Least-confounded,yes,residual plot,rep3,2,3,100,4,www/images/sleepstudy/v23_4.png,0
+899,person0100,question899,Conditional,yes,residual plot,rep3,2,3,100,1,www/images/sleepstudy/v23_1.png,0
+900,person0100,question900,Least-confounded,no,QQ-plot,rep3,1,3,100,3,www/images/sleepstudy/v13_3.png,0

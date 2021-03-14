@@ -1,0 +1,23 @@
+---
+title: "Analysis"
+author: "Aarathy Babu"
+date: "14/03/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(stringr)
+```
+
+
+```{r}
+
+pilot_survey_results <- read_csv("data/pilot_survey_results.csv")
+images_allocation <- read_csv("data/images_allocation.csv")
+
+```
+
