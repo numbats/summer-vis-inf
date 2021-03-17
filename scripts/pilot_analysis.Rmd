@@ -303,16 +303,18 @@ analysis_data%>%
       str_detect(resid,"Least-confounded") & str_detect(plot_type,"residual plot")~"Least-confounded residual"
     ))%>%
   ggplot(aes(x=certainity,y=n,fill=detected))+
-  geom_col(position = "dodge")+
+  geom_col()+
   facet_grid(version~pname)+
-  scale_y_continuous(breaks = seq(0,10,by=2))
+  scale_y_continuous(breaks = seq(0,10,by=2))+
+ylab("Count")
 
 analysis_data%>%
   count(resid,plot_type,version,detected)%>%
  # filter(resid=="Conditional")%>%
   ggplot(aes(x=version,y=n,fill=detected))+
   geom_col(position="dodge")+
-  facet_wrap(resid~plot_type)
+  facet_wrap(resid~plot_type)+
+ylab("Count")
 
 ```
 conditional residual is more prominent in when checking the outlying observations and normality. Survey takers found true plot of noise data easily detectable. 
