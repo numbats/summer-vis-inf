@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = F)
 library(readr)
 library(dplyr)
 library(tidyverse)
@@ -20,6 +20,10 @@ pilot_survey_results <-
   read_csv(here::here("data/pilot_survey_results.csv"))
 images_allocation <-
   read_csv(here::here("data/images_allocation.csv"))
+
+visits<- images_allocation%>%
+  distinct(unique_id)%>%
+  nrow()
 
 images_allocation <- images_allocation %>% mutate(assigned_plot = paste0("v", plot_num, version , "_" , plot_order, ".png")) %>%
   select(-c(1,8:11))
@@ -115,6 +119,8 @@ true_plots <- tibble(
     "vNA2_NA.png",
     "vNA3_NA.png",
     "vNA4_NA.png",
+    "vNA5_NA.png",
+    
     
     
     "v21_1.png",
@@ -174,6 +180,7 @@ true_plots <- tibble(
     8,
     8,
     8,
+    8,
     
     
     1,
@@ -216,7 +223,98 @@ data <- pilot_survey_results %>%
 ```
 
 ```{r}
+attempts <- data %>%
+  distinct(Name) %>%
+  nrow()
+attempts
 
+gender <- data %>%
+distinct(Gender,Name)%>% 
+  group_by(Gender)%>%
+  count(Gender)
+
+gender
+
+  
 ```
 
+```{r}
 
+analysis_data <- data %>%
+  rename(plot_type=plot.y)%>%
+  mutate(match_true=case_when((responses==true_plot )~"Yes",
+                              (responses!=true_plot)~"No"),
+         version=case_when( (noise=="yes")~"Noise",
+           (noise=="no")~"No Noise"
+         )) 
+
+#using reference plot 
+reference_plot <- analysis_data %>%
+  filter((plot_type=="control")&(match_true=="No"))%>%
+  select(identifier,Name)
+  
+
+analysis_data <- analysis_data %>%
+  anti_join(reference_plot,by="identifier")%>%
+  filter(plot_type!="control")
+
+
+analysis_data %>%
+count(version,match_true)
+
+analysis_data%>%
+  ggplot(aes(x=version,fill=match_true))+
+  geom_bar()
+
+analysis_data%>%
+  count(resid,plot_type,version,match_true)%>%
+  mutate(total=attempts,
+         prop=n/total)
+
+
+analysis_data%>%
+  count(resid,plot_type,version,match_true)%>%
+  mutate(total=attempts,
+         prop=n/total)%>%
+  filter(match_true=="Yes")
+  
+  
+
+
+analysis_data%>%
+  count(resid,plot_type,version,match_true)%>%
+ # filter(resid=="Least-confounded")%>%
+  ggplot(aes(x=version,y=n,fill=match_true))+
+  geom_col(position="dodge")+
+  facet_wrap(~plot_type)
+
+
+```
+```{r}
+
+  analysis_data %>%
+  group_by(resid,plot_type,version,match_true)%>%
+  count(certainity)%>%
+  mutate(
+    pname=case_when(
+      str_detect(resid,"Conditional") &str_detect(plot_type,"residual plot")~"Conditional Residual",
+      str_detect(resid,"Conditional") & str_detect(plot_type,"QQ-plot")~"Conditional QQ",
+      str_detect(resid,"Least-confounded") & str_detect(plot_type,"QQ-plot")~"Least-confounded QQ",
+      str_detect(resid,"Least-confounded") & str_detect(plot_type,"residual plot")~"Least-confounded residual"
+    ))%>%
+  ggplot(aes(x=certainity,y=n,fill=match_true))+
+  geom_col(position = "dodge")+
+  facet_grid(version~pname)+
+  scale_y_continuous(breaks = seq(0,10,by=2))
+
+analysis_data%>%
+  count(resid,plot_type,version,match_true)%>%
+ # filter(resid=="Conditional")%>%
+  ggplot(aes(x=version,y=n,fill=match_true))+
+  geom_col(position="dodge")+
+  facet_wrap(resid~plot_type)
+
+```
+conditional residual is more prominent in when checking the outlying observations and normality. Survey takers found true plot of noise data easily detectable. 
+
+(QQ) plot to explore the normality of conditional errors, survey takers saw the true plot in no noise data more than noise data
