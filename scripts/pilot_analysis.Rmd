@@ -303,7 +303,7 @@ analysis_data%>%
       str_detect(resid,"Least-confounded") & str_detect(plot_type,"residual plot")~"Least-confounded residual"
     ))%>%
   ggplot(aes(x=certainity,y=n,fill=match_true))+
-  geom_col(position = "dodge")+
+  geom_col()+
   facet_grid(version~pname)+
   scale_y_continuous(breaks = seq(0,10,by=2))
 
