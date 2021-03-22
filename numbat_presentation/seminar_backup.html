@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Visual inference for graphical diagnostics of linear mixed models</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Aarathy Babu       Master of Business Analytics" />
+    <meta name="date" content="2021-03-22" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <link href="libs/remark-css/default-fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="my-theme.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+
+
+
+
+
+
+class: title-slide   
+
+
+background-image: url(images/background.jpg)
+background-size: cover
+
+
+# Visual inference for graphical diagnostics of linear mixed models 
+## NUMBATS Seminar
+
+
+&lt;br/&gt;
+&lt;br/&gt;
+&lt;br/&gt;
+&lt;br/&gt;
+&lt;br/&gt;
+&lt;br/&gt;
+
+### Presented by :
+### Aarathy Babu 
+### Master of Business Analytics
+
+---
+
+class: me-slide
+
+
+background-image: url(images/three.jpg)
+background-size: cover
+
+
+&lt;br/&gt;
+&lt;br/&gt;
+&lt;br/&gt;
+&lt;br/&gt;
+&lt;br/&gt;
+&lt;br/&gt;
+&lt;br/&gt;
+&lt;br/&gt;
+
+### Hello ! 
+
+### My name is Aarathy Babu.
+
+#### I am a Master of Business Analytics Candidate at Monash Univeristy.
+
+#### You can find me at @AarathyB on Twitter! 
+
+---
+
+# I will be talking about :
+
+
+My summer research project on a visual inference study on appropriate residual diagnostics for multi-level models.
+
+Project Supervisors : Professor Dianne Cook and Dr. Emi Tanaka  
+
+--
+
+ Based on the Master's thesis titled, "Visual inference for graphical diagnostics of linear mixed models" written by Kaiwen Jin, a Master's student at Monash University.
+
+
+---
+
+# Linear Mixed Models
+
+* An extension of simple linear models as it allow both fixed and random effects, and are particularly used when there is non independence in the data.
+
+*For example :*
+
+* When there are multiple levels, such as patients seen by the same doctor, the variability in the outcome can be thought of as being either within group or between group.
+
+ + Patient level observations are not independent, as within a given doctor, patients are more similar. 
+ + The unit at highest level, that is the doctors are independent. 
+ 
+ 
+* In case of fitting complex correlated data structures, Linear mixed model (LMM) is more versatile, as it accounts the dependency between the units.
+
+
+---
+
+* LMM goes by other names,
+
+ + Panel data model in Econometrics.
+
+--
+
+ + Hierarchical model or multi-level model in Social science.
+
+--
+
+* Also called the mixed-effects model as it consists of a mix of fixed and random effects.
+
+--
+
+* Mathematical form of linear mixed model is as follows : 
+
+ + For `\(i = 1, 2, \ldots, n\)` non-overlapping groups, a linear mixed model may be expressed as
+`$$\underset{(m_i \times 1)}{\mathbf{y}_i} = \underset{(m_i \times p)}{\mathbf{X}_i} \underset{(p\times 1)}{\boldsymbol{\beta}} + \underset{(m_i \times q)}{\mathbf{Z}_i}\underset{(q \times 1)}{\mathbf{b}_i} + \underset{(m_i \times 1)}{\mathbf{e}_i}$$`
+
+
+where `\(\mathbf{y}_i\)` is vector of response, `\(\mathbf{X}_i\)` is fixed-effects design or regressor matrix and `\(\mathbf{Z}_i\)` corresponds to the random effects matrix and `\(\mathbf e\)` is a vector of random errors. 
+
+
+---
+
+# Residual Analysis
+
+* Diagnostic analysis is more complex in LMM than in the standard case because the three types of residuals :
+
+ + Marginal Residuals : Predicts marginal errors
+ + Condtional Residuals : Predicts conditional errors
+ + Random effects Residuals : predicts the random effects
+ 
+* Complication to this is the concept of confounding, when error depends on other errors than it was supposed to predict. 
+ 
+ + We consider the least confounding residuals.
+ 
+* In this research project, we detect the existence of abnormal observations from conditional residuals, and confounded residuals as well as evaluate the normality of conditional errors based on conditional residuals versus
+confounding conditional residuals.
+
+---
+
+# How ?
+
+--
+
+**Graphical Diagnostics**
+
+* Graphical diagnostics focusing on the residual analysis are alternative methods to test
+the hypotheses based on the simulation approaches such as parametric bootstrap applied
+in the lineup protocol. 
+
+* Visual inference
+is  tool based on the application of **lineup protocol** which constitutes of usually,
+19 null plots, and one data plot that randomly inserts among the null plots based on the
+experimental design setup that we created. These lineups are then presented to a number
+of (possibly independent) observers for evaluation.
+
+ + The null hypothesis : The plot is not distinguishable from the null plots. 
+ 
+ + Alternate hypothesis : Some differences found in the data plot compared to null plots.
+ 
+ + The corresponding p-value is calculated.
+ 
+---
+
+# Summer Research Project 
+
+* Four diagnostic maps are employed. 
+
+* A survey is created to validate the methods and to find which residual is better at checking the presence of outlying observations and exploring whether the conditional errors follow a normal
+distribution. 
+
+---
+
+# Data used
+
+
+* Sleep deprivation study data set in the R package lme4. 
+
+18 subjects. 10 days. Normal sleep on Day 0. Rest of nights 3 hours of sleep administered. Reaction variable records average reaction time (ms) per day. 
+ 
+![](seminar_backup_files/figure-html/unnamed-chunk-1-1.png)&lt;!-- --&gt;
+
+---
+
+# Experimental Setup
+
+* The experiment is administered over two versions of data with 5 replicates : 
+
+  + Without noise
+ 
+  + Data injected with Noise level of 20% of mean reaction time added to 33% of the participants over random 2 days. 
+
+The noise level was chosen such that the data plot is noticeable enough but not too obvious. 
+
+*  Parametric bootstrap approach to generate the null data for each lineup. 
+ 
+ + Vector of random effects and conditional residuals generated. 
+ 
+ + Bootstrap sample `\(\mathbf{y}^*_i\)` from `\(\mathbf{y}_i = \mathbf{X}_i \hat{\boldsymbol{\beta}} + \mathbf{Z}_i \mathbf{b}^*_i + \mathbf{e}^*_i\)` for each group `\(i = 1, 2, ...,n\)` and the model refitted to the bootstrap sample.
+ 
+These are repeated for 19 times and The line ups were generated using the R package nullabor. 
+
+
+---
+
+# Survey 
+
+Designed using the R package edibble by Dr. Emi Tanaka. 
+
+
+```r
+library(edibble)
+
+expdf &lt;- start_design("Residual diagnostic for multi-level models") %&gt;%
+  set_context(data_source = "lme4::sleepstudy",
+              data_info = "18 subjects measured over 10 days on reaction time",
+              noise = "20% of the mean added to ~33% of participants (=6 participants) for (random) 2 days") %&gt;%
+  set_units(person = 100,
+            question = nested_in(person, 9)) %&gt;%
+  set_trts(trt = c("Conditional,no,QQ-plot",
+                   "Least-confounded,no,QQ-plot",
+                   "Conditional,yes,QQ-plot",
+                   "Least-confounded,yes,QQ-plot",
+                   "Conditional,no,residual plot",
+                   "Least-confounded,no,residual plot",
+                   "Conditional,yes,residual plot",
+                   "Least-confounded,yes,residual plot",
+                   "control,control,control"),
+           data = c("rep1", "rep2", "rep3", "rep4", "rep5")) %&gt;%
+  allocate_trts( trt ~ question,
+                 data ~ person) %&gt;%
+  randomise_trts() %&gt;%
+  serve_table()
+```
+
+```
+## lme4::sleepstudy
+```
+
+```
+## 18 subjects measured over 10 days on reaction time
+```
+
+```
+## 20% of the mean added to ~33% of participants (=6 participants) for (random) 2
+## days
+```
+
+---
+
+background-image: url(images/shiny_app_front.png)
+background-size: 90%
+
+
+---
+
+background-image: url(images/line_up_shiny.png)
+background-size: 90%
+
+---
+
+background-image: url(https://www.tillamookcountypioneer.net/wp-content/uploads/2019/12/thank_you_card_maker_app01-670x330.jpg)
+background-size: cover
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
