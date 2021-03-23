@@ -273,6 +273,7 @@ expdf <- start_design("Residual diagnostic for multi-level models") %>%
 background-image: url(images/shiny_app_front.png)
 background-size: 90%
 
+Experiment can be found at : https://ebsmonash.shinyapps.io/visual-inference-study/
 
 ---
 

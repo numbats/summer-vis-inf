@@ -320,6 +320,44 @@ ylab("Count")
 conditional residual is more prominent in when checking the outlying observations and normality. Survey takers found true plot of noise data easily detectable. 
 
 (QQ) plot to explore the normality of conditional errors, survey takers saw the true plot in no noise data more than noise data
-time: mean, sd, order
-remove secrets
-add the presentation
+```{r}
+#time: mean, sd, order
+time_analysis <- analysis_data %>%
+  mutate(
+    pname=case_when(
+      str_detect(resid,"Conditional") &str_detect(plot_type,"residual plot")~"Conditional Residual",
+      str_detect(resid,"Conditional") & str_detect(plot_type,"QQ-plot")~"Conditional QQ",
+      str_detect(resid,"Least-confounded") & str_detect(plot_type,"QQ-plot")~"Least-confounded QQ",
+      str_detect(resid,"Least-confounded") & str_detect(plot_type,"residual plot")~"Least-confounded residual"
+    ))
+
+time_analysis%>%
+  group_by(pname)%>%
+  summarise(avg_time=mean(time))%>%
+  arrange(avg_time)
+
+
+time_analysis%>%
+  group_by(pname,version)%>%
+  summarise(avg_time=mean(time))%>%
+  arrange(avg_time)
+```
+- QQ plots checking the normality took more time in being answered. 
+- Least time taken was for Conditional residual with the residual plot for the noisy data. Most time taken was for QQ plots least confounded residual. 
+
+```{r}
+time_analysis %>%
+  group_by(pname,version,detected)%>%
+  summarise(avg_time=mean(time))%>%
+  arrange(avg_time)%>%
+
+  ggplot(aes(y=avg_time,x=pname))+
+  geom_col()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  facet_grid(version~detected)+
+  xlab("Line up type")+
+  ylim(0,30)
+
+```
+
+

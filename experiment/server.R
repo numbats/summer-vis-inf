@@ -4,7 +4,7 @@ library(googlesheets4)
 library(googledrive)
 library(rsconnect)
 library(purrr)
-library(agricolae) # used for Latin Square Design
+library(agricolae)
 questions <- readRDS("data/questions.Rds")
 
 
