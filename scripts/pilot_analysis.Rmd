@@ -366,4 +366,4 @@ time_analysis %>%
 ```
 
 Some plots which took around 20 seconds and above to be answered saw that the true plot wasnt detected. 
-Plots of noise data didnt take much time for the true plot to be detected compared to the others.
+Plots of noise data didn't take much time for the true plot to be detected compared to the others.
