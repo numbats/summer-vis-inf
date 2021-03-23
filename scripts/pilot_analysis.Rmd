@@ -320,3 +320,6 @@ ylab("Count")
 conditional residual is more prominent in when checking the outlying observations and normality. Survey takers found true plot of noise data easily detectable. 
 
 (QQ) plot to explore the normality of conditional errors, survey takers saw the true plot in no noise data more than noise data
+time: mean, sd, order
+remove secrets
+add the presentation

@@ -110,6 +110,9 @@ lin_extract_fitted_mod <- function(mod, data) {
   num[i] <- nrow(unique(a[i]))
  }
   vc <- as.data.frame(VarCorr(mod))
+ # R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+#G1 <- vc$vcov[vc$grp=="scenario"] * diag(nscenario)
+#G2 <- vc$vcov[vc$grp=="subject"] * diag(nsubject)
   
    R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
   G1 <- vc$vcov[1] * diag(num[2])

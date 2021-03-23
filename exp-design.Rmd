@@ -12,15 +12,14 @@ knitr::opts_chunk$set(
 
 ```{r}
 library(edibble)
-library(googledrive)
+library(tidyverse)
 
-set.seed(1)
-df <- start_design("Residual diagnostic for multi-level models") %>% 
+expdf <- start_design("Residual diagnostic for multi-level models") %>%
   set_context(data_source = "lme4::sleepstudy",
               data_info = "18 subjects measured over 10 days on reaction time",
-              noise = "20% of the mean added to ~33% of participants (=6 participants) for (random) 2 days") %>% 
-  set_units(person = 100,
-            question = nested_in(person, 9)) %>% 
+              noise = "20% of the mean added to ~33% of participants (=6 participants) for (random) 2 days") %>%
+  set_units(person0 = 100,
+            question = nested_in(person0, 9)) %>%
   set_trts(trt = c("Conditional,no,QQ-plot",
                    "Least-confounded,no,QQ-plot",
                    "Conditional,yes,QQ-plot",
@@ -30,41 +29,54 @@ df <- start_design("Residual diagnostic for multi-level models") %>%
                    "Conditional,yes,residual plot",
                    "Least-confounded,yes,residual plot",
                    "control,control,control"),
-           data = c("rep1", "rep2", "rep3", "rep4", "rep5")) %>% 
+           data = c("rep1", "rep2", "rep3", "rep4", "rep5")) %>%
   allocate_trts( trt ~ question,
-                       data ~ person) %>% 
-  randomise_trts() %>% 
+                 data ~ person0) %>%
+  randomise_trts() %>%
   serve_table()
 
-df <- df %>% 
+expdf <- expdf %>%
   tidyr::separate(trt, c("resid", "noise", "plot"), sep = ",")
 
 ###
 
-library(tidyverse)
-df <- df %>%
+
+expdf <- expdf %>%
   tsibble::tibble()%>%
   mutate(
-    num=case_when(
-    str_detect(noise,"no")~1,
-    str_detect(noise,"yes")~2
- 
-))
-df$version <- regmatches(df$data,regexpr(".$", df$data))
+    plot_num=case_when(
+      str_detect(noise,"no")~1,
+      str_detect(noise,"yes")~2
 
-df <- df%>%
+    ))
+expdf$version <- regmatches(expdf$data,regexpr(".$", expdf$data))
+expdf$p_id <- as.numeric(stringi::stri_sub(expdf$person0,7))
+expdf <- expdf%>%
   mutate(
-    order=case_when(
-    str_detect(resid,"Conditional") &str_detect(plot,"residual plot")~1,
-    str_detect(resid,"Conditional") & str_detect(plot,"QQ-plot")~2,
-    str_detect(resid,"Least-confounded") & str_detect(plot,"QQ-plot")~3,
-    str_detect(resid,"Least-confounded") & str_detect(plot,"residual plot")~4
+    plot_order=case_when(
+      str_detect(resid,"Conditional") &str_detect(plot,"residual plot")~1,
+      str_detect(resid,"Conditional") & str_detect(plot,"QQ-plot")~2,
+      str_detect(resid,"Least-confounded") & str_detect(plot,"QQ-plot")~3,
+      str_detect(resid,"Least-confounded") & str_detect(plot,"residual plot")~4
     ))
 
-df <- df %>%
-  mutate(image_list=paste0("www/images/sleepstudy/v",num,version ,"_" , order ,".png"))
-####
+expdf <- expdf %>%
+  mutate(image_list=paste0("www/images/sleepstudy/v",plot_num,version ,"_" , plot_order ,".png"))
 
+expdf$unique_id <- 0
+expdf$unique_id <- as.character(expdf$unique_id)
+
+
+#write.csv(expdf,file = "experiment/data/experiment.csv")
+
+#googlesheets4::sheet_write(expdf)
+
+ssid <- as_sheets_id("https://docs.google.com/spreadsheets/d/1lh_YNT19KoaJm9hyBAHFuHDGhTdNO7pFhkLOpWxX5YI/edit#gid=0")
+class(ssid)
+unclass(ssid) # id of the google sheet showing image allocation
+
+id <- as_sheets_id("https://docs.google.com/spreadsheets/d/1X84LWPw0JiH9KslBzCEF4cNGe1hFsmrGJ7IM4PwJIC4/edit#gid=0")
+unclass(id) # id of the survey results google sheet
 
 ```
 

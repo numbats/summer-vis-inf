@@ -70,7 +70,7 @@ slmod2 <- lmer(Reaction ~ Days + (Days - 1 | Subject) +
 # summary(slmod2)
 
 set.seed(987654321)
-sl_mod2_sims <- simulate(slmod2, nsim = 19) # simulate the fitted linear mixed model
+sl_mod2_sims <- simulate(slmod2, nsim = 19) 
 sl_mod2_refit <- lapply(sl_mod2_sims, refit, object = slmod2) # refits the model
 sl_mod2_sim_ranef <- lapply(sl_mod2_refit, function(x) ranef(x)[[1]]) # extracts the modes of the random effects
 sl_mod2_sim_ranef <- do.call("rbind", sl_mod2_sim_ranef) # binds the 19 different dataframes as one
@@ -152,8 +152,12 @@ sl_extract_fitted <- function(mod, data) {
  }
   vc <- as.data.frame(VarCorr(mod))
   
+ # R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  #G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  # G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  
    R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
-  G1 <- vc$vcov[1] * diag(num[2])
+  G1 <- vc$vcov[1] * diag(num[2]) 
   G2 <- vc$vcov[2] * diag(num[1])# covariance matrix of random effects
 
   G <- Matrix::bdiag(G1, G2)

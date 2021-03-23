@@ -1,0 +1,2734 @@
+---
+title: "case5"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lme4)
+library(ggplot2)
+library(mvtnorm)
+library(dplyr)
+library(tidyverse)
+library(plyr)
+library(nullabor)
+library(MASS)
+```
+
+```{r}
+data("sleepstudy")
+head(sleepstudy)
+skimr::skim(sleepstudy)
+summary(sleepstudy)
+```
+
+```{r}
+ggplot(sleepstudy, aes(Days, Reaction)) +
+  geom_point() +
+  facet_wrap(~Subject) +
+  geom_smooth(method = "lm", se = FALSE) +
+  ylab("Reaction")
+
+ggplot(sleepstudy, aes(Subject, Reaction)) +
+  geom_boxplot()
+```
+
+```{r}
+testrandom <- plyr::ddply(sleepstudy, .(Subject), function(x) {
+  m <- lm(Reaction ~ Days, data = x)
+  data.frame(x, fitted = fitted(m))
+})
+
+ggplot(testrandom, aes(Days, fitted, group = Subject)) +
+  geom_line()
+```
+
+Therefore, from the plots, the model needs the random intercept and random slope.
+
+```{r}
+# random intercept and random slope
+slmod1 <- lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
+# independent random effects
+slmod2 <- lmer(Reaction ~ Days + (Days - 1 | Subject) + (1 | Subject), data = sleepstudy)
+# summary(slmod1)
+# summary(slmod2)
+
+set.seed(987654321)
+sl.mod2.sims <- simulate(slmod2, nsim = 19)
+sl.mod2.refit <- lapply(sl.mod2.sims, refit, object = slmod2)
+sl.mod2.sim.ranef <- lapply(sl.mod2.refit, function(x) ranef(x)[[1]])
+sl.mod2.sim.ranef <- do.call("rbind", sl.mod2.sim.ranef)
+sl.mod2.sim.ranef$.n <- rownames(sl.mod2.sim.ranef)
+sl.mod2.sim.ranef$.n <- as.numeric(str_extract(sl.mod2.sim.ranef$.n, "\\d+"))
+true.sl.mod1.ranef <- ranef(slmod1)$Subject
+sl_df <- nullabor:::add_true(sl.mod2.sim.ranef, true.sl.mod1.ranef, pos = 9)
+ggplot(data = sl_df, aes(x = `(Intercept)`, y = Days)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm", se = FALSE, alpha = 0.4) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL)
+```
+
+Since the true plot is indistinguishable from the null plots, there is no need for the correlation between the random effects.
+
+Hence the model is shown in `slmod2`.
+
+From the true model, replicating the data for 4 times by $y \sim (X\beta, \Omega)$, where $\Omega = Z\Gamma Z^\top + R$ and refitting the model with $y = X\beta + Zb + e$ and get the plots & null plots.
+
+- Version 1: 'best' model
+- Version 2: slight noise (error is correlated such as `kronecker(diag(3), matrix(1, nrow = 2, ncol = 2))`, sample from the data by adding small values to the sample data)
+- Version 3: Extreme value (with obvious outlier but not that obvious)
+
+Since $M_i$ are the same for each case, the plot 7 and 8 are ignored!
+
+$$\boldsymbol y \sim N(X\beta, Z \Gamma Z^\top + R)$$
+
+```{r fitfn}
+sl.extract.fitted <- function(mod, data) {
+  N <- nrow(data)
+  subjects <- unique(data$Subject)
+  nsubjects <- length(subjects)
+
+  y <- data$y
+  X <- getME(mod, "X")
+  beta <- fixef(mod)
+  Z <- getME(mod, "Z")
+  u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(mod))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(mod) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(mod) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted_df <- data %>%
+    dplyr::mutate(
+      fitted = as.vector(X %*% beta),
+      resm = y - fitted,
+      resc = as.vector(y - fitted - Z %*% u),
+      index = 1:n()
+    ) %>%
+    mutate(
+      resm_std = resm / sqrt(diag(varMargRes)[index]),
+      resc_std = resc / sqrt(diag(varCondRes)[index])
+    ) %>%
+    ungroup()
+
+  return(fitted_df)
+}
+```
+
+```{r lcrfn}
+sl.extract.lcr <- function(mod, data) {
+  N <- nrow(data)
+  subjects <- unique(data$Subject)
+  nsubjects <- length(subjects)
+
+  y <- data$y
+  X <- getME(mod, "X")
+  beta <- fixef(mod)
+  Z <- getME(mod, "Z")
+  u <- c(ranef(mod)$Subject[, 1], ranef(mod)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(mod))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(mod) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(mod) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- as.vector(y - fitted - Z %*% u)
+  index <- 1:nrow(data)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+
+  resmcp_sl <- tibble::tibble(resmcp)
+
+  return(resmcp_sl)
+}
+```
+
+```{r simulate}
+sl.sim <- function(mod, data, nsim = 19, seed, std = FALSE) {
+  fit.sim <- simulate(mod, nsim = nsim, seed = seed)
+  fit.refit <- lapply(fit.sim, refit, object = mod)
+  fit.simy <- lapply(fit.refit, function(x) getME(x, "y"))
+  fit.simy.y <- do.call("cbind", fit.simy)
+  fit.simy.y <- reshape2::melt(fit.simy.y)[-1]
+  names(fit.simy.y) <- c(".n", "y")
+  fit.simy.y$.n <- as.numeric(str_extract(fit.simy.y$.n, "\\d+"))
+  fit.simy.y$Subject <- rep(data$Subject, 19)
+  fit.simy.y$Days <- rep(data$Days, 19)
+  return(fit.simy.y)
+}
+```
+
+```{r}
+colnames(sleepstudy)[1] <- c("y")
+sl.fitted <- sl.extract.fitted(slmod2, sleepstudy)
+sl.lcr <- sl.extract.lcr(slmod2, sleepstudy)
+```
+
+```{r}
+ggplot(sl.fitted, aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(data = sl.fitted %>% filter(resm_std > 2), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2)
+ggplot(sl.fitted, aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(data = sl.fitted %>% filter(abs(resc_std) > 3), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2)
+ggplot(sl.fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+ggplot(sl.lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+- There is no evidence showing the presence of outlying observations.
+- The the index for 8, 57 and 60 are the outlying observations in the reaction values for conditional residuals. 
+  + Index 8 shows a significant drop at day 7 for subject 308
+  + Index 57 shows an increase at day 6 for subject 332
+  + Index 60 shows a drop at day 9 for subject 332
+- Plot 6 shows the Gaussian QQ plot for the conditional residuals. However, from the plot, there are obvious tails. One extreme point on the upper end and two on the lower end may seem exceptional. The conditonal residuals might not follow a normal distribution.
+- Plot 7 shows the Gaussian QQ plot for the least confounded residuals. There also shows some tails.
+
+
+## Version 1
+
+```{r}
+set.seed(1234)
+
+N <- nrow(sleepstudy)
+nsubjects <- length(unique(sleepstudy$Subject))
+
+vc <- as.data.frame(VarCorr(slmod2))
+R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+G <- Matrix::bdiag(G1, G2)
+
+n <- getME(slmod2, "n")
+q <- getME(slmod2, "q")
+
+# normal error
+e <- mvrnorm(n = 1, mu = rep(0, n), Sigma = R)
+
+# normal random effects
+b <- mvrnorm(n = 1, mu = rep(0, q), Sigma = G)
+
+y <- as.vector(getME(slmod2, "X") %*% fixef(slmod2) + getME(slmod2, "Z") %*% b + e)
+
+v1.sl <- tibble(sleepstudy[, -1], y)
+```
+
+```{r v1mod}
+v1.sl.mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = v1.sl)
+```
+
+
+### Data plots from the 'best' model
+
+```{r v1data}
+v1.sl.fitted <- sl.extract.fitted(v1.sl.mod, v1.sl)
+v1.sl.lcr <- sl.extract.lcr(v1.sl.mod, v1.sl)
+```
+
+```{r}
+ggplot(v1.sl.fitted, aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(data = v1.sl.fitted %>% filter(resm_std > 3), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2)
+ggplot(v1.sl.fitted, aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(data = v1.sl.fitted %>% filter(abs(resc_std) > 3), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2)
+ggplot(v1.sl.fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+ggplot(v1.sl.lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+- It seems that there is no outlying observations in the marginal residuals
+- one or two outlying observations listed in the conditional residual
+- The conditional residual and least confounded residuals are not normally distributed as both are right-skewed.
+
+### 1st replication
+
+#### Simulation
+
+```{r}
+v11.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 1234)
+```
+
+```{r nullfitted-v11}
+v11.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v11.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v11}
+v11.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v11.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+##### Lineup plots
+
+```{r v11n-plot2}
+s11.1 <- lineup(true = v1.sl.fitted, samples = v11.sl.sim.fitted, pos = 7) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v11_1.png",
+  plot = s11.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v11n-plot4, fig.height=6}
+s11.2 <- lineup(true = v1.sl.fitted, samples = v11.sl.sim.fitted, pos = 7) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v11_2.png",
+  plot = s11.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v11n-plot6, fig.height=6}
+s11.3 <- lineup(true = v1.sl.fitted, samples = v11.sl.sim.fitted, pos = 9) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v11_3.png",
+  plot = s11.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v11n-plot6-lcr, fig.height=6}
+s11.4 <- lineup(true = v1.sl.lcr, samples = v11.sl.simlcr, pos = 9) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v11_4.png",
+  plot = s11.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+### 2nd replication
+
+### Simulation
+
+```{r}
+v12.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 2345)
+```
+
+```{r nullfitted-v12}
+v12.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v12.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v12}
+v12.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v12.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+#### Lineup plots
+
+```{r v12n-plo2, fig.height=6}
+s12.1 <- lineup(true = v1.sl.fitted, samples = v12.sl.sim.fitted, pos = 7) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v12_1.png",
+  plot = s12.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v12n-plo4, fig.height=6}
+s12.2 <- lineup(true = v1.sl.fitted, samples = v12.sl.sim.fitted, pos = 7) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v12_2.png",
+  plot = s12.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v12n-plo6}
+s12.3 <- lineup(true = v1.sl.fitted, samples = v12.sl.sim.fitted, pos = 9) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v12_3.png",
+  plot = s12.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v12n-plo6-lcr, fig.height=6}
+s12.4 <- lineup(true = v1.sl.lcr, samples = v12.sl.simlcr, pos = 9) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v12_4.png",
+  plot = s12.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+### 3rd replication
+
+### Simulation
+
+```{r}
+v13.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 3456)
+```
+
+```{r nullfitted-v13}
+v13.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v13.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v13}
+v13.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v13.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+#### Lineup plots
+
+```{r v13n-plo2, fig.height=6}
+s13.1 <- lineup(true = v1.sl.fitted, samples = v13.sl.sim.fitted, pos = 13) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v13_1.png",
+  plot = s13.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v13n-plo4, fig.height=6}
+s13.2 <- lineup(true = v1.sl.fitted, samples = v13.sl.sim.fitted, pos = 13) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v13_2.png",
+  plot = s13.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v13n-plo6, fig.height=6}
+s13.3 <- lineup(true = v1.sl.fitted, samples = v13.sl.sim.fitted, pos = 4) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v13_3.png",
+  plot = s13.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+```{r v13n-plo6-lcr, fig.height=6}
+s13.4 <- lineup(true = v1.sl.lcr, samples = v13.sl.simlcr, pos = 4) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v13_4.png",
+  plot = s13.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+### 4th replication
+
+### Simulation
+
+```{r}
+v14.sl.sim <- sl.sim(v1.sl.mod, v1.sl, seed = 9876)
+```
+
+```{r nullfitted-v14}
+v14.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v14.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v14}
+v14.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v14.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+#### Lineup plots
+
+```{r v14n-plo2, fig.height=6}
+s14.1 <- lineup(true = v1.sl.fitted, samples = v14.sl.sim.fitted, pos = 13) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v14_1.png",
+  plot = s14.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+```{r v14n-plo4, fig.height=6}
+s14.2 <- lineup(true = v1.sl.fitted, samples = v14.sl.sim.fitted, pos = 13) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v14_2.png",
+  plot = s14.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v14n-plo6, fig.height=6}
+s14.3 <- lineup(true = v1.sl.fitted, samples = v14.sl.sim.fitted, pos = 4) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v14_3.png",
+  plot = s14.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+```{r v14n-plo6-lcr, fig.height=6}
+s14.4 <- lineup(true = v1.sl.lcr, samples = v14.sl.simlcr, pos = 4) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v14_4.png",
+  plot = s14.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+## Version 2
+
+Added the within unit correlation in the error term by value 1, that is for first subject, first 10 observations' error terms are correlated.
+
+Or we sampled the day (from 0 to 9) as the index. We added 50 to the reaction value for each subject on the same day which is sampled from. 
+
+```{r}
+N <- nrow(sleepstudy)
+subjects <- unique(sleepstudy$Subject)
+nsubjects <- length(subjects)
+X <- getME(slmod2, "X")
+beta <- fixef(slmod2)
+Z <- getME(slmod2, "Z")
+u <- c(ranef(slmod2)$Subject[, 1], ranef(slmod2)$Subject[, 2])
+q <- length(u)
+vc <- as.data.frame(VarCorr(slmod2))
+R <- vc$vcov[vc$grp == "Residual"] * diag(N / nsubjects)
+G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+G <- Matrix::bdiag(G1, G2)
+
+R[lower.tri(R)] <- 25
+R[upper.tri(R)] <- 25
+
+R <- kronecker(diag(18), R)
+
+Sigma <- Z %*% G %*% t(Z) + R
+
+set.seed(1234)
+y <- as.vector(mvtnorm::rmvnorm(1, mean = X %*% beta, sigma = Sigma, checkSymmetry = FALSE))
+
+v2.sl <- tibble(y, sleepstudy$Days, sleepstudy$Subject)
+colnames(v2.sl) <- c("y", "Days", "Subject")
+
+# Second option:
+# repc2 <- sleepstudy
+# set.seed(1234)
+# samp <- sample(1:10, 1)
+# colnames(repc2)[1] <- "y"
+# mean_subject <- ddply(repc2, .(Subject), summarise, mean = mean(y))
+# mean(mean_subject$mean)*0.1
+# for (i in 1:n){
+#  repc2[(i*samp),]$y <- repc2[(i*samp),]$y + 30
+# }
+
+# repc2
+```
+
+```{r}
+v2.sl.mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = v2.sl)
+
+v2.sl.fitted <- sl.extract.fitted(v2.sl.mod, v2.sl)
+v2.sl.lcr <- sl.extract.lcr(v2.sl.mod, v2.sl)
+```
+
+### Data plots
+```{r}
+ggplot(v2.sl.fitted, aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(data = v2.sl.fitted %>% filter(abs(resm_std) > 3), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2)
+
+ggplot(v2.sl.fitted, aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(data = v2.sl.fitted %>% filter(abs(resc_std) > 3), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2)
+
+ggplot(v2.sl.fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+
+ggplot(v2.sl.lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+By adding the noise,
+- the extra outlying observation of subject 333 is added for marginal
+- the extra outlying observation of subject 178 is added for conditional residual
+- the conditional residual does not follow a normal distribution as it is right-skewed
+- the least confounded residual does not follow a normal distribution as well as it is relative negative-skewed.
+
+### 1st replication
+
+### Simulation
+
+```{r}
+v21.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 9876)
+```
+
+```{r nullfitted-v21}
+v21.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v21.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v21}
+v21.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v21.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+#### Lineup plots
+
+```{r v21n-plo2, fig.height=6}
+s21.1 <- lineup(true = v2.sl.fitted, samples = v21.sl.sim.fitted, pos = 5) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v21_1.png",
+  plot = s21.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v21n-plo4, fig.height=6}
+s21.2 <- lineup(true = v2.sl.fitted, samples = v21.sl.sim.fitted, pos = 5) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v21_2.png",
+  plot = s21.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v21n-plo6, fig.height=6}
+s21.3 <- lineup(true = v2.sl.fitted, samples = v21.sl.sim.fitted, pos = 8) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v21_3.png",
+  plot = s21.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v21n-plo6-lcr, fig.height=6}
+s21.4 <- lineup(true = v2.sl.lcr, samples = v21.sl.simlcr, pos = 8) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v21_4.png",
+  plot = s21.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+### 2nd replication
+
+### Simulation
+
+```{r}
+v22.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 8765)
+```
+
+```{r nullfitted-v22}
+v22.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v22.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v22}
+v22.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v22.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+#### Lineup plots
+
+```{r v22n-plo2, fig.height=6}
+s22.1 <- lineup(true = v2.sl.fitted, samples = v22.sl.sim.fitted, pos = 5) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v22_1.png",
+  plot = s22.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v22n-plo4, fig.height=6}
+s22.2 <- lineup(true = v2.sl.fitted, samples = v22.sl.sim.fitted, pos = 5) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v22_2.png",
+  plot = s22.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v22n-plo6, fig.height=6}
+s22.3 <- lineup(true = v2.sl.fitted, samples = v22.sl.sim.fitted, pos = 8) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v22_3.png",
+  plot = s22.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v22n-plo6-lcr, fig.height=6}
+s22.4 <- lineup(true = v2.sl.lcr, samples = v22.sl.simlcr, pos = 8) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v22_4.png",
+  plot = s22.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+### 3rd replication
+
+#### Simulation
+
+```{r}
+v23.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 4387)
+```
+
+```{r nullfitted-v23}
+v23.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v23.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v23}
+v23.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v23.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+##### Lineup plots
+
+```{r v23n-plo2, fig.height=6}
+s23.1 <- lineup(true = v2.sl.fitted, samples = v23.sl.sim.fitted, pos = 15) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v23_1.png",
+  plot = s23.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v23n-plo4, fig.height=6}
+s23.2 <- lineup(true = v2.sl.fitted, samples = v23.sl.sim.fitted, pos = 15) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v23_2.png",
+  plot = s23.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v23n-plo6, fig.height=6}
+s23.3 <- lineup(true = v2.sl.fitted, samples = v23.sl.sim.fitted, pos = 20) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v23_3.png",
+  plot = s23.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v23n-plo6-lcr, fig.height=6}
+s23.4 <- lineup(true = v2.sl.lcr, samples = v23.sl.simlcr, pos = 20) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v23_4.png",
+  plot = s23.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+### 4th replication
+
+#### Simulation
+
+```{r}
+v24.sl.sim <- sl.sim(v2.sl.mod, v2.sl, seed = 8696)
+```
+
+```{r nullfitted-v24}
+v24.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v24.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v24}
+v24.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v24.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+##### Lineup plots
+
+```{r v24n-plo2, fig.height=6}
+s24.1 <- lineup(true = v2.sl.fitted, samples = v24.sl.sim.fitted, pos = 15) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v24_1.png",
+  plot = s24.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v24n-plo4, fig.height=6}
+s24.2 <- lineup(true = v2.sl.fitted, samples = v24.sl.sim.fitted, pos = 15) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v24_2.png",
+  plot = s24.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v24n-plo6, fig.height=6}
+s24.3 <- lineup(true = v2.sl.fitted, samples = v24.sl.sim.fitted, pos = 20) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v24_3.png",
+  plot = s24.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+```{r v24n-plo6-lcr, fig.height=6}
+s24.4 <- lineup(true = v2.sl.lcr, samples = v24.sl.simlcr, pos = 20) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v24_4.png",
+  plot = s24.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+## Version 3
+
+I randomly insert 20% of the mean value of response value in `sleepstudy` to two of each subject.
+
+```{r}
+set.seed(1234)
+samp_df <- tibble(sleepstudy %>% group_by(Subject) %>% sample_n(size = 2))
+samp_df$y <- samp_df$y + mean(sleepstudy$y) * 0.2
+
+rest_df <- anti_join(sleepstudy, samp_df, by = c("Days", "Subject"))
+
+d <- rbind(samp_df, rest_df)
+v3.sl <- d %>% arrange(Subject, Days)
+```
+
+```{r}
+v3.sl.mod <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = v3.sl)
+
+v3.sl.fitted <- sl.extract.fitted(v3.sl.mod, v3.sl)
+v3.sl.lcr <- sl.extract.lcr(v3.sl.mod, v3.sl)
+```
+
+#### Data plots
+
+```{r}
+ggplot(v3.sl.fitted, aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(data = v3.sl.fitted %>% filter(resm_std > 3), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2)
+slp_dp2 <- ggplot(v3.sl.fitted, aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_text(data = v3.sl.fitted %>% filter(abs(resc_std) > 3), aes(label = index), nudge_x = 0.35, nudge_y = 0.35, size = 2) +
+  ylab("Standardised conditional residuals") +
+  theme()
+slp_dp2
+ggsave(path = here::here("figures/second/"), filename = "slp_dp2.png", plot = slp_dp2, device = "png", dpi = 300)
+
+ggplot(v3.sl.fitted, aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+ggplot(v3.sl.lcr, aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red")
+```
+
+- There is one obvious outliers in the marginal residuals
+- There are 3 obvious outliers in the conditional residuals
+- Both are not normally distributed.
+
+
+### 1st replication
+
+#### Simulation
+```{r}
+v31.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 1253)
+```
+
+```{r nullfitted-v31}
+v31.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v31.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v31}
+v31.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v31.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+
+##### Lineup plots
+
+```{r v31n-plo2, fig.height=6}
+s31.1 <- lineup(true = v3.sl.fitted, samples = v31.sl.sim.fitted, pos = 15) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v31_1.png",
+  plot = s31.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v31n-plo4, fig.height=6}
+s31.2 <- lineup(true = v3.sl.fitted, samples = v31.sl.sim.fitted, pos = 15) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v31_2.png",
+  plot = s31.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v31n-plo6, fig.height=6}
+s31.3 <- lineup(true = v3.sl.fitted, samples = v31.sl.sim.fitted, pos = 11) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v31_3.png",
+  plot = s31.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v31n-plo6-lcr, fig.height=6}
+s31.4 <- lineup(true = v3.sl.lcr, samples = v31.sl.simlcr, pos = 11) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v31_4.png",
+  plot = s31.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+### 2nd replication
+
+#### Simulation
+
+```{r}
+v32.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 2353)
+```
+
+```{r nullfitted-v32}
+v32.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v32.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v32}
+v32.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v32.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+##### Lineup plots
+
+```{r v32n-plo2, fig.height=6}
+s32.1 <- lineup(true = v3.sl.fitted, samples = v32.sl.sim.fitted, pos = 15) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v32_1.png",
+  plot = s32.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v32n-plo4, fig.height=6}
+s32.2 <- lineup(true = v3.sl.fitted, samples = v32.sl.sim.fitted, pos = 15) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v32_2.png",
+  plot = s32.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+```{r v32n-plo6, fig.height=6}
+s32.3 <- lineup(true = v3.sl.fitted, samples = v32.sl.sim.fitted, pos = 11) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v32_3.png",
+  plot = s32.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+```{r v32n-plo6-lcr, fig.height=6}
+s32.4 <- lineup(true = v3.sl.lcr, samples = v32.sl.simlcr, pos = 11) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v32_4.png",
+  plot = s32.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+### 3rd replication
+
+#### Simulation
+
+```{r}
+v33.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 4792)
+```
+
+```{r nullfitted-v33}
+v33.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v33.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v33}
+v33.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v33.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+##### Lineup plots
+
+```{r v33n-plo2, fig.height=6}
+s33.1 <- lineup(true = v3.sl.fitted, samples = v33.sl.sim.fitted, pos = 2) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v33_1.png",
+  plot = s33.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+```{r v33n-plo4, fig.height=6}
+s33.2 <- lineup(true = v3.sl.fitted, samples = v33.sl.sim.fitted, pos = 2) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v33_2.png",
+  plot = s33.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+
+```{r v33n-plo6, fig.height=6}
+s33.3 <- lineup(true = v3.sl.fitted, samples = v33.sl.sim.fitted, pos = 6) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v33_3.png",
+  plot = s33.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+true plot is identified, the conditional residual does not follow a normal distribution.
+
+```{r v33n-plo6-lcr, fig.height=6}
+s33.4 <- lineup(true = v3.sl.lcr, samples = v33.sl.simlcr, pos = 6) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v33_4.png",
+  plot = s33.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+### 4th replication
+
+#### Simulation
+
+```{r}
+v34.sl.sim <- sl.sim(v3.sl.mod, v3.sl, seed = 9865)
+```
+
+```{r nullfitted-v34}
+v34.sl.sim.fitted <- purrr::map_dfr(1:19, function(i) {
+  df <- v34.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  tibble::tibble(df, fitted, resm_std, resc_std, index)
+})
+```
+
+```{r lcrsimnull-v34}
+v34.sl.simlcr <- purrr::map_dfr(1:19, function(i) {
+  df <- v34.sl.sim %>% filter(.n == i)
+  m <- lmer(y ~ Days + (Days - 1 | Subject) + (1 | Subject), data = df)
+
+  N <- nrow(df)
+  subjects <- unique(df$Subject)
+  nsubjects <- length(subjects)
+
+  y <- df$y
+  X <- model.matrix(~Days, data = df)
+  beta <- fixef(m)
+  Z <- getME(m, "Z")
+  u <- c(ranef(m)$Subject[, 1], ranef(m)$Subject[, 2])
+  q <- length(u)
+
+  vc <- as.data.frame(VarCorr(m))
+  R <- vc$vcov[vc$grp == "Residual"] * diag(N)
+  G1 <- vc$vcov[vc$grp == "Subject"] * diag(nsubjects)
+  G2 <- vc$vcov[vc$grp == "Subject.1"] * diag(nsubjects)
+  G <- Matrix::bdiag(G1, G2)
+
+  Sigma <- Z %*% G %*% t(Z) + R
+  Sigma_inv <- solve(Sigma)
+
+  P <- Sigma_inv - Sigma_inv %*% X %*% vcov(m) %*% t(X) %*% Sigma_inv
+
+  varMargRes <- Sigma - X %*% vcov(m) %*% t(X)
+  varCondRes <- R %*% P %*% R
+  varU <- G - G %*% t(Z) %*% P %*% Z %*% G
+
+  fitted <- as.vector(X %*% beta)
+  resm <- y - fitted
+  resc <- y - fitted - as.vector(Z %*% u)
+  index <- 1:nrow(df)
+  resm_std <- resm / sqrt(diag(varMargRes)[index])
+  resc_std <- resc / sqrt(diag(varCondRes)[index])
+
+  R_half <- expm::sqrtm(R)
+
+  auxqn <- eigen((R_half %*% P %*% R_half), symmetric = T, only.values = FALSE)
+
+  p <- length(beta)
+
+  lt <- sqrt(solve(diag((auxqn$values[1:(N - p)])))) %*% t(auxqn$vectors[1:N, 1:(N - p)]) %*% solve(expm::sqrtm(R[1:N, 1:N]))
+
+  var.resmcp <- lt %*% varCondRes[1:N, 1:N] %*% t(lt)
+
+  resmcp <- (lt %*% resc[1:N]) / sqrt(diag(var.resmcp))
+  .n <- i
+
+  tibble::tibble(.n, resmcp)
+})
+```
+
+
+##### Lineup plots
+
+```{r v34n-plo2, fig.height=6}
+s34.1 <- lineup(true = v3.sl.fitted, samples = v34.sl.sim.fitted, pos = 2) %>%
+  ggplot(aes(index, resm_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v34_1.png",
+  plot = s34.1, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+```{r v34n-plo4, fig.height=6}
+s34.2 <- lineup(true = v3.sl.fitted, samples = v34.sl.sim.fitted, pos = 2) %>%
+  ggplot(aes(index, resc_std, color = Subject)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v34_2.png",
+  plot = s34.2, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+```{r v34n-plo6, fig.height=6}
+s34.3 <- lineup(true = v3.sl.fitted, samples = v34.sl.sim.fitted, pos = 6) %>%
+  ggplot(aes(sample = resc_std)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v34_3.png",
+  plot = s34.3, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+
+```{r v34n-plo6-lcr, fig.height=6}
+s34.4 <- lineup(true = v3.sl.lcr, samples = v34.sl.simlcr, pos = 6) %>%
+  ggplot(aes(sample = resmcp)) +
+  geom_qq() +
+  geom_qq_line(color = "red") +
+  facet_wrap(~.sample, ncol = 5) +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(
+    axis.text.y = element_blank(), axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+    legend.position = "none", aspect.ratio = 1
+  )
+
+ggsave(
+  path = here::here("figures/lineup/original"), filename = "slp_v34_4.png",
+  plot = s34.4, device = "png", dpi = 300,
+  height = 12, width = 12
+)
+```
+
+- For version 3, the conditional residual is easier to be detected.

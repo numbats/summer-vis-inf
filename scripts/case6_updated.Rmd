@@ -132,6 +132,10 @@ autism_extract_fitted_mod <- function(mod, data) {
  }
   vc <- as.data.frame(VarCorr(mod))
   
+    #R <- vc$vcov[vc$grp == "Residual"] * diag(n)
+   # G1 <- vc$vcov[vc$grp == "childid"] * diag(nchild)
+  #  G2 <- vc$vcov[vc$grp == "childid.1"] * diag(nchild)
+  
    R <- vc$vcov[3] * diag(N) # covariance matrix of random errors
   G1 <- vc$vcov[1] * diag(num[2])
   G2 <- vc$vcov[2] * diag(num[1])
