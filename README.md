@@ -59,3 +59,6 @@ This is the repo for a 2020-2021 summer project to conduct a visual inference st
 
 * Plot the actual data 
 * Plot of data plots with number of subjects and noise varied
+
+## Deployed Shiny app
+The deployed shiny app can be found at [here](https://ebsmonash.shinyapps.io/visual-inference-study/)
