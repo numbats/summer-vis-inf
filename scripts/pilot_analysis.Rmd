@@ -21,67 +21,68 @@ pilot_survey_results <-
 images_allocation <-
   read_csv(here::here("data/images_allocation.csv"))
 
-visits<- images_allocation%>%
-  distinct(unique_id)%>%
+visits <- images_allocation %>%
+  distinct(unique_id) %>%
   nrow()
 
-images_allocation <- images_allocation %>% mutate(assigned_plot = paste0("v", plot_num, version , "_" , plot_order, ".png")) %>%
-  select(-c(1,8:11))
+images_allocation <- images_allocation %>%
+  mutate(assigned_plot = paste0("v", plot_num, version, "_", plot_order, ".png")) %>%
+  select(-c(1, 8:11))
 
 correct <- c(
   "v11_1.png" = 3,
   "v11_2.png" = 1,
   "v11_3.png" = 7,
   "v11_4.png" = 5,
-  
+
   "v12_1.png" = 5,
   "v12_2.png" = 2,
   "v12_3.png" = 8,
   "v12_4.png" = 1,
-  
+
   "v13_1.png" = 2,
   "v13_2.png" = 5,
   "v13_3.png" = 9,
   "v13_4.png" = 6,
-  
+
   "v14_1.png" = 10,
   "v14_2.png" = 4,
   "v14_3.png" = 9,
   "v14_4.png" = 10,
-  
+
   "v15_1.png" = 7,
   "v15_2.png" = 3,
   "v15_3.png" = 10,
   "v15_4.png" = 13,
-  
+
   "vNA1_NA.png" = 8,
   "vNA2_NA.png" = 8,
   "vNA3_NA.png" = 8,
   "vNA4_NA.png" = 8,
-  
-  
+
+
   "v21_1.png" = 1,
   "v21_2.png" = 4,
   "v21_3.png" = 14,
   "v21_4.png" = 6,
-  
+
   "v22_1.png" = 6,
   "v22_2.png" = 14,
   "v22_3.png" = 3,
   "v22_4.png" = 11,
-  
+
   "v23_1.png" = 3,
   "v23_2.png" = 7,
   "v23_3.png" = 5,
   "v23_4.png" = 12,
-  
-  
+
+
   "v24_1.png" = 6,
   "v24_2.png" = 14,
   "v24_3.png" = 3,
   "v24_4.png" = 16,
-  
-  
+
+
   "v25_1.png" = 6,
   "v25_2.png" = 14,
   "v25_3.png" = 3,
@@ -94,57 +95,57 @@ true_plots <- tibble(
     "v11_2.png",
     "v11_3.png",
     "v11_4.png",
-    
+
     "v12_1.png",
     "v12_2.png",
     "v12_3.png",
     "v12_4.png",
-    
+
     "v13_1.png",
     "v13_2.png",
     "v13_3.png",
     "v13_4.png",
-    
+
     "v14_1.png",
     "v14_2.png",
     "v14_3.png",
     "v14_4.png",
-    
+
     "v15_1.png",
     "v15_2.png",
     "v15_3.png",
     "v15_4.png",
-    
+
     "vNA1_NA.png",
     "vNA2_NA.png",
     "vNA3_NA.png",
     "vNA4_NA.png",
     "vNA5_NA.png",
-    
-    
-    
+
+
+
     "v21_1.png",
     "v21_2.png",
     "v21_3.png",
     "v21_4.png",
-    
+
     "v22_1.png",
     "v22_2.png",
     "v22_3.png",
     "v22_4.png",
-    
+
     "v23_1.png",
     "v23_2.png",
     "v23_3.png",
     "v23_4.png",
-    
-    
+
+
     "v24_1.png",
     "v24_2.png",
     "v24_3.png",
     "v24_4.png",
-    
-    
+
+
     "v25_1.png",
     "v25_2.png",
     "v25_3.png",
@@ -155,55 +156,55 @@ true_plots <- tibble(
     1,
     7,
     5,
-    
+
     5,
     2,
     8,
     1,
-    
+
     2,
     5,
     9,
     6,
-    
+
     10,
     4,
     9,
     10,
-    
+
     7,
     3,
     10,
     13,
-    
+
     8,
     8,
     8,
     8,
     8,
-    
-    
+
+
     1,
     4,
     14,
     6,
-    
+
     6,
     14,
     3,
     11,
-    
+
     3,
     7,
     5,
     12,
-    
-    
+
+
     6,
     14,
     3,
     16,
-    
+
     6,
     14,
     3,
@@ -215,11 +216,10 @@ true_plots <- tibble(
 ```{r}
 
 images_allocation <- images_allocation %>%
-  left_join(true_plots,by=c("assigned_plot"="plot_name"))
+  left_join(true_plots, by = c("assigned_plot" = "plot_name"))
 
 data <- pilot_survey_results %>%
-  left_join(images_allocation, by = c(c("identifier" = "unique_id"),c("plot"="assigned_plot")))
-
+  left_join(images_allocation, by = c(c("identifier" = "unique_id"), c("plot" = "assigned_plot")))
 ```
 
 ```{r}
@@ -229,117 +229,123 @@ attempts <- data %>%
 attempts
 
 gender <- data %>%
-distinct(Gender,Name)%>% 
-  group_by(Gender)%>%
+  distinct(Gender, Name) %>%
+  group_by(Gender) %>%
   count(Gender)
 
 gender
-
-  
 ```
 
 ```{r}
 
 analysis_data <- data %>%
-  rename(plot_type=plot.y)%>%
-  mutate(detected=case_when((responses==true_plot )~"Yes",
-                              (responses!=true_plot)~"No"),
-         version=case_when( (noise=="yes")~"Noise",
-           (noise=="no")~"No Noise"
-         )) 
+  rename(plot_type = plot.y) %>%
+  mutate(
+    detected = case_when(
+      (responses == true_plot) ~ "Yes",
+      (responses != true_plot) ~ "No"
+    ),
+    version = case_when(
+      (noise == "yes") ~ "Noise",
+      (noise == "no") ~ "No Noise"
+    )
+  )
 
-#using reference plot 
+# using reference plot
 reference_plot <- analysis_data %>%
-  filter((plot_type=="control")&(detected=="No"))%>%
-  select(identifier,Name)
-  
+  filter((plot_type == "control") & (detected == "No")) %>%
+  select(identifier, Name)
+
 
 analysis_data <- analysis_data %>%
-  anti_join(reference_plot,by="identifier")%>%
-  filter(plot_type!="control")
+  anti_join(reference_plot, by = "identifier") %>%
+  filter(plot_type != "control")
 
 
 analysis_data %>%
-count(version,detected)
+  count(version, detected)
 
-analysis_data%>%
-  ggplot(aes(x=version,fill=detected))+
+analysis_data %>%
+  ggplot(aes(x = version, fill = detected)) +
   geom_bar()
 
-analysis_data%>%
-  count(resid,plot_type,version,detected)%>%
-  mutate(total=attempts,
-         prop=n/total)
+analysis_data %>%
+  count(resid, plot_type, version, detected) %>%
+  mutate(
+    total = attempts,
+    prop = n / total
+  )
 
 
-analysis_data%>%
-  count(resid,plot_type,version,detected)%>%
-  mutate(total=attempts,
-         prop=n/total)%>%
-  filter(detected=="Yes")
-  
-  
+analysis_data %>%
+  count(resid, plot_type, version, detected) %>%
+  mutate(
+    total = attempts,
+    prop = n / total
+  ) %>%
+  filter(detected == "Yes")
 
 
-analysis_data%>%
-  count(resid,plot_type,version,detected)%>%
- # filter(resid=="Least-confounded")%>%
-  ggplot(aes(x=version,y=n,fill=detected))+
-  geom_col(position="dodge")+
+
+
+analysis_data %>%
+  count(resid, plot_type, version, detected) %>%
+  # filter(resid=="Least-confounded")%>%
+  ggplot(aes(x = version, y = n, fill = detected)) +
+  geom_col(position = "dodge") +
   facet_wrap(~plot_type)
-
-
 ```
 ```{r}
 
-  analysis_data %>%
-  group_by(resid,plot_type,version,detected)%>%
-  count(certainity)%>%
+analysis_data %>%
+  group_by(resid, plot_type, version, detected) %>%
+  count(certainity) %>%
   mutate(
-    pname=case_when(
-      str_detect(resid,"Conditional") &str_detect(plot_type,"residual plot")~"Conditional Residual",
-      str_detect(resid,"Conditional") & str_detect(plot_type,"QQ-plot")~"Conditional QQ",
-      str_detect(resid,"Least-confounded") & str_detect(plot_type,"QQ-plot")~"Least-confounded QQ",
-      str_detect(resid,"Least-confounded") & str_detect(plot_type,"residual plot")~"Least-confounded residual"
-    ))%>%
-  ggplot(aes(x=certainity,y=n,fill=detected))+
-  geom_col(position = "dodge")+
-  facet_grid(version~pname)+
-  scale_y_continuous(breaks = seq(0,10,by=2))+
-ylab("Count")
+    pname = case_when(
+      str_detect(resid, "Conditional") & str_detect(plot_type, "residual plot") ~ "Conditional Residual",
+      str_detect(resid, "Conditional") & str_detect(plot_type, "QQ-plot") ~ "Conditional QQ",
+      str_detect(resid, "Least-confounded") & str_detect(plot_type, "QQ-plot") ~ "Least-confounded QQ",
+      str_detect(resid, "Least-confounded") & str_detect(plot_type, "residual plot") ~ "Least-confounded residual"
+    )
+  ) %>%
+  ggplot(aes(x = certainity, y = n, fill = detected)) +
+  geom_col(position = "dodge") +
+  facet_grid(version ~ pname) +
+  scale_y_continuous(breaks = seq(0, 10, by = 2)) +
+  ylab("Count")
 
-analysis_data%>%
-  count(resid,plot_type,version,detected)%>%
- # filter(resid=="Conditional")%>%
-  ggplot(aes(x=version,y=n,fill=detected))+
-  geom_col(position="dodge")+
-  facet_wrap(resid~plot_type)+
-ylab("Count")
-
+analysis_data %>%
+  count(resid, plot_type, version, detected) %>%
+  # filter(resid=="Conditional")%>%
+  ggplot(aes(x = version, y = n, fill = detected)) +
+  geom_col(position = "dodge") +
+  facet_wrap(resid ~ plot_type) +
+  ylab("Count")
 ```
 conditional residual is more prominent in when checking the outlying observations and normality. Survey takers found true plot of noise data easily detectable. 
 
 (QQ) plot to explore the normality of conditional errors, survey takers saw the true plot in no noise data more than noise data
 ```{r}
-#time: mean, sd, order
+# time: mean, sd, order
 time_analysis <- analysis_data %>%
   mutate(
-    pname=case_when(
-      str_detect(resid,"Conditional") &str_detect(plot_type,"residual plot")~"Conditional Residual",
-      str_detect(resid,"Conditional") & str_detect(plot_type,"QQ-plot")~"Conditional QQ",
-      str_detect(resid,"Least-confounded") & str_detect(plot_type,"QQ-plot")~"Least-confounded QQ",
-      str_detect(resid,"Least-confounded") & str_detect(plot_type,"residual plot")~"Least-confounded residual"
-    ))
+    pname = case_when(
+      str_detect(resid, "Conditional") & str_detect(plot_type, "residual plot") ~ "Conditional Residual",
+      str_detect(resid, "Conditional") & str_detect(plot_type, "QQ-plot") ~ "Conditional QQ",
+      str_detect(resid, "Least-confounded") & str_detect(plot_type, "QQ-plot") ~ "Least-confounded QQ",
+      str_detect(resid, "Least-confounded") & str_detect(plot_type, "residual plot") ~ "Least-confounded residual"
+    )
+  )
 
-time_analysis%>%
-  group_by(pname)%>%
-  summarise(avg_time=mean(time))%>%
+time_analysis %>%
+  group_by(pname) %>%
+  summarise(avg_time = mean(time)) %>%
   arrange(avg_time)
 
 
-time_analysis%>%
-  group_by(pname,version)%>%
-  summarise(avg_time=mean(time))%>%
+time_analysis %>%
+  group_by(pname, version) %>%
+  summarise(avg_time = mean(time)) %>%
   arrange(avg_time)
 ```
 - QQ plots checking the normality took more time in being answered. 
@@ -347,22 +353,20 @@ time_analysis%>%
 
 ```{r}
 time_analysis %>%
-  group_by(pname,version,detected)%>%
-  summarise(avg_time=mean(time))%>%
+  group_by(pname, version, detected) %>%
+  summarise(avg_time = mean(time)) %>%
   arrange(avg_time)
 
 time_analysis %>%
-  group_by(pname,version,detected)%>%
-  summarise(avg_time=mean(time))%>%
-  arrange(avg_time)%>%
-
-  ggplot(aes(y=avg_time,x=pname))+
-  geom_col()+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
-  facet_grid(version~detected)+
-  xlab("Line up type")+
-  ylim(0,30)
-
+  group_by(pname, version, detected) %>%
+  summarise(avg_time = mean(time)) %>%
+  arrange(avg_time) %>%
+  ggplot(aes(y = avg_time, x = pname)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  facet_grid(version ~ detected) +
+  xlab("Line up type") +
+  ylim(0, 30)
 ```
 
 Some plots which took around 20 seconds and above to be answered saw that the true plot wasnt detected. 
