@@ -13,6 +13,24 @@ This is the repo for a 2020-2021 summer project to conduct a visual inference st
 2. Check metric underlying is correct
 3. Run experiment 
 
+# Deployed Shiny app
+The deployed shiny app can be found at [here](https://ebsmonash.shinyapps.io/visual-inference-study/)
+
+# Summary of Repository
+
++ scripts : The folder contains the R scripts of the analysis undertaken and contains the following, 
+  + original_scripts_kaiwen folder : The original R scripts on sleep, linguistic and autism study by Kaiwen Jin.
+  + intermediate_scripts folder    : New R scripts on noise tests, sleep, linguistic and autism study.
+  + final_experiment_sleepstudy    : R script used for sleep study Shiny experiment. 
+  + pilot_analysis : R script for the survey results analysis. 
+  
++ figures : Contains the lineups of original lineups by Kaiwen, sleep, linguistic and autism study. 
++ experiment : Server, UI etc for the shiny app
++ numbat_presentation : Xaringan for seminar presentation
++ data : The folder contains original survey results by Kaiwen as well as the the new image allocation and survey results. 
++ exp-design.Rmd : Experimental design. 
++ summary : Summary of the related research papers. 
+  
 # Milestone
 
 ## 2020/12/07
@@ -60,5 +78,3 @@ This is the repo for a 2020-2021 summer project to conduct a visual inference st
 * Plot the actual data 
 * Plot of data plots with number of subjects and noise varied
 
-## Deployed Shiny app
-The deployed shiny app can be found at [here](https://ebsmonash.shinyapps.io/visual-inference-study/)
