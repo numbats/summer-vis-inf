@@ -29,7 +29,8 @@ The deployed shiny app can be found at [here](https://ebsmonash.shinyapps.io/vis
 + numbat_presentation : Xaringan for seminar presentation
 + data : The folder contains original survey results by Kaiwen as well as the the new image allocation and survey results. 
 + exp-design.Rmd : Experimental design. 
-+ summary : Summary of the related research papers. 
++ summary : Summary of the related research papers.
++ thesis.pdf : Master's thesis of Kaiwen Jin
   
 # Milestone
 
