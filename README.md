@@ -16,7 +16,7 @@ This is the repo for a 2020-2021 summer project to conduct a visual inference st
 # Deployed Shiny app
 The deployed shiny app can be found at [here](https://ebsmonash.shinyapps.io/visual-inference-study/)
 
-# Summary of Repository
+# Summary of Repository 
 
 + scripts : The folder contains the R scripts of the analysis undertaken and contains the following, 
   + original_scripts_kaiwen folder : The original R scripts on sleep, linguistic and autism study by Kaiwen Jin.
