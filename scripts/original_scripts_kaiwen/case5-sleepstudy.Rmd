@@ -1942,7 +1942,7 @@ slp_dp2 <- ggplot(v3.sl.fitted, aes(index, resc_std, color = Subject)) +
   ylab("Standardised conditional residuals") +
   theme()
 slp_dp2
-ggsave(path = here::here("figures/second/"), filename = "slp_dp2.png", plot = slp_dp2, device = "png", dpi = 300)
+#ggsave(path = here::here("figures/second/"), filename = "slp_dp2.png", plot = slp_dp2, device = "png", dpi = 300)
 
 ggplot(v3.sl.fitted, aes(sample = resc_std)) +
   geom_qq() +
