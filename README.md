@@ -22,7 +22,7 @@ The deployed shiny app can be found at [here](https://ebsmonash.shinyapps.io/vis
   + original_scripts_kaiwen folder : The original R scripts on sleep, linguistic and autism study by Kaiwen Jin.
   + intermediate_scripts folder    : New R scripts on noise tests, sleep, linguistic and autism study.
   + final_experiment_sleepstudy    : R script used for sleep study Shiny experiment. 
-  + pilot_analysis : R script for the survey results analysis. 
+  + pilot_analysis : R script for the survey results analysis.  
   
 + figures : Contains the lineups of original lineups by Kaiwen, sleep, linguistic and autism study. 
 + experiment : Server, UI etc for the shiny app
